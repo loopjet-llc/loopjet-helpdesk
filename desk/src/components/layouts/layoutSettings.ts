@@ -51,9 +51,4 @@ export const customerPortalSidebarOptions = [
     icon: LucideTicket,
     to: "TicketsCustomer",
   },
-  {
-    label: __("Knowledge Base"),
-    icon: LucideBookOpen,
-    to: "CustomerKnowledgeBase",
-  },
 ];
