@@ -267,5 +267,17 @@ function setFocus() {
   search.value?.focus?.();
 }
 
-defineExpose({ setFocus });
+function commitPendingValue() {
+  const pendingValue = query.value.trim();
+  if (!pendingValue) return true;
+
+  addValue(pendingValue);
+  if (error.value) return false;
+
+  query.value = "";
+  showOptions.value = false;
+  return true;
+}
+
+defineExpose({ commitPendingValue, setFocus });
 </script>

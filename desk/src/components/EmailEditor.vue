@@ -33,6 +33,7 @@
       <div class="mx-6 md:mx-5 flex items-center gap-2 border-y py-2.5">
         <span class="text-p-xs text-ink-gray-4">{{ __("To") }}:</span>
         <MultiSelectInput
+          ref="toInput"
           v-model="toEmailsClone"
           class="flex-1"
           :validate="validateEmailWithZod"
@@ -375,6 +376,7 @@ const showCC = ref(false);
 const showBCC = ref(false);
 const cc = computed(() => (ccEmailsClone.value?.length ? true : false));
 const bcc = computed(() => (bccEmailsClone.value?.length ? true : false));
+const toInput = ref(null);
 const ccInput = ref(null);
 const bccInput = ref(null);
 
@@ -489,6 +491,11 @@ function submitMail() {
   if (isContentEmpty(newEmail.value) && isContentEmpty(quotedContent.value)) {
     return false;
   }
+  const pendingRecipientsAreValid = [toInput, ccInput, bccInput]
+    .map((input) => input.value?.commitPendingValue?.() ?? true)
+    .every(Boolean);
+  if (!pendingRecipientsAreValid) return false;
+
   if (
     !toEmailsClone.value.length &&
     !ccEmailsClone.value.length &&
@@ -536,6 +543,11 @@ function resetState() {
   newEmail.value = emailSignature.value ? emailSignature.value : null;
   attachments.value = [];
   quotedContent.value = null;
+  toEmailsClone.value = [...props.toEmails];
+  ccEmailsClone.value = [...props.ccEmails];
+  bccEmailsClone.value = [...props.bccEmails];
+  showCC.value = false;
+  showBCC.value = false;
   isQuoteExpanded.value = false;
   focusEditorAtStart();
 }
