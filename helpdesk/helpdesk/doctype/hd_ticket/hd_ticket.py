@@ -571,6 +571,38 @@ class HDTicket(Document):
             )
 
     @frappe.whitelist()
+    def post_public_comment(
+        self,
+        content: str,
+        additional_recipients: list[str] | str | None = None,
+        attachments: list[str] = [],
+    ):
+        """Post a customer-visible comment and notify only approved recipients."""
+        if not is_agent():
+            frappe.throw(
+                _("You are not permitted to reply as an agent"),
+                frappe.PermissionError,
+            )
+
+        from helpdesk.helpdesk.doctype.hd_ticket.recipients import (
+            get_public_comment_recipients,
+            validate_additional_recipients,
+        )
+
+        selected = frappe.parse_json(additional_recipients) or []
+        if not isinstance(selected, list):
+            frappe.throw(_("Recipients must be a list."), frappe.ValidationError)
+
+        recipient_options = get_public_comment_recipients(self)
+        additional = validate_additional_recipients(recipient_options, selected)
+        return self.reply_via_agent(
+            message=content,
+            to=recipient_options["requester"]["email"],
+            cc=",".join(additional) or None,
+            attachments=attachments,
+        )
+
+    @frappe.whitelist()
     def reply_via_agent(
         self,
         message: str,

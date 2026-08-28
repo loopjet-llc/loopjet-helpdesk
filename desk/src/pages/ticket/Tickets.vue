@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="relative flex h-full min-h-0 flex-col overflow-hidden">
     <LayoutHeader>
       <template #left-header>
         <ViewBreadcrumbs
@@ -11,28 +11,40 @@
         />
       </template>
       <template #right-header>
-        <RouterLink
-          class="inline-flex"
-          :to="{ name: isCustomerPortal ? 'TicketNew' : 'TicketAgentNew' }"
-        >
-          <Button label="Create" theme="gray" variant="solid">
-            <template #prefix>
-              <LucidePlus class="h-4 w-4" />
-            </template>
-          </Button>
-        </RouterLink>
+        <div class="flex items-center gap-2">
+          <div class="flex rounded-lg bg-surface-gray-2 p-1">
+            <Button
+              :variant="viewMode === 'kanban' ? 'solid' : 'ghost'"
+              :label="__('Board')"
+              @click="viewMode = 'kanban'"
+            >
+              <template #prefix><LucideColumns3 class="size-4" /></template>
+            </Button>
+            <Button
+              :variant="viewMode === 'list' ? 'solid' : 'ghost'"
+              :label="__('Liste')"
+              @click="viewMode = 'list'"
+            >
+              <template #prefix><LucideList class="size-4" /></template>
+            </Button>
+          </div>
+          <RouterLink
+            class="inline-flex"
+            :to="{ name: isCustomerPortal ? 'TicketNew' : 'TicketAgentNew' }"
+          >
+            <Button :label="__('Neu')" theme="gray" variant="solid">
+              <template #prefix>
+                <LucidePlus class="h-4 w-4" />
+              </template>
+            </Button>
+          </RouterLink>
+        </div>
       </template>
     </LayoutHeader>
     <ListViewBuilder
       ref="listViewRef"
       :options="options"
-      @row-click="
-        (row) =>
-          $router.push({
-            name: isCustomerPortal ? 'TicketCustomer' : 'TicketAgent',
-            params: { ticketId: row },
-          })
-      "
+      @row-click="(row) => (selectedTicket = row)"
     />
     <ExportModal
       v-model="showExportModal"
@@ -51,6 +63,14 @@
       :selections="listSelections"
       @success="listViewRef?.unselectAll()"
     />
+    <TicketBoardDrawer
+      v-if="selectedTicket"
+      :key="selectedTicket"
+      :ticket-id="selectedTicket"
+      :is-customer-portal="isCustomerPortal"
+      @close="selectedTicket = null"
+      @updated="listViewRef?.reload()"
+    />
   </div>
 </template>
 
@@ -59,6 +79,7 @@ import { LayoutHeader, ListViewBuilder } from "@/components";
 import { EditIcon, PinIcon, TicketIcon, UnpinIcon } from "@/components/icons";
 import IndicatorIcon from "@/components/icons/IndicatorIcon.vue";
 import BulkReplyModal from "@/components/ticket-agent/BulkReplyModal.vue";
+import TicketBoardDrawer from "@/components/ticket/TicketBoardDrawer.vue";
 import ExportModal from "@/components/ticket/ExportModal.vue";
 import ViewBreadcrumbs from "@/components/ViewBreadcrumbs.vue";
 import ViewModal from "@/components/ViewModal.vue";
@@ -79,6 +100,7 @@ import {
 } from "frappe-ui";
 import { computed, h, onMounted, onUnmounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useStorage } from "@vueuse/core";
 
 const router = useRouter();
 const route = useRoute();
@@ -103,6 +125,11 @@ const { $dialog, $socket } = globalStore();
 const { isManager, userId } = useAuthStore();
 
 const listViewRef = ref(null);
+const selectedTicket = ref<string | null>(null);
+const viewMode = useStorage<"list" | "kanban">(
+  `helpdesk-ticket-view-${isCustomerPortal.value ? "customer" : "agent"}`,
+  "kanban"
+);
 const showExportModal = ref(false);
 
 const { getStatus } = useTicketStatusStore();
@@ -179,9 +206,11 @@ const options = computed(() => ({
     },
   },
   isCustomerPortal: isCustomerPortal.value,
-  selectable: true,
-  showSelectBanner: true,
+  selectable: viewMode.value === "list",
+  showSelectBanner: viewMode.value === "list",
   selectBannerActions,
+  viewMode: viewMode.value,
+  default_page_length: viewMode.value === "kanban" ? 100 : 20,
   emptyState: {
     title: __("No tickets found"),
     icon: h(TicketIcon, {
@@ -202,7 +231,7 @@ const options = computed(() => ({
     name: isCustomerPortal.value ? "TicketCustomer" : "TicketAgent",
     prop: "ticketId",
   },
-  hideColumnSetting: false,
+  hideColumnSetting: viewMode.value === "kanban",
 }));
 
 function handleResponseByField(row: any, item: string) {

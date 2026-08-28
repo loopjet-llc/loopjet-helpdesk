@@ -42,6 +42,14 @@
   >
     <LoadingIndicator :scale="8" />
   </div>
+  <!-- Kanban View -->
+  <TicketKanban
+    v-else-if="options.viewMode === 'kanban' && list.data?.data?.length > 0"
+    :rows="list.data.data"
+    :is-customer-portal="options.isCustomerPortal"
+    @open="(ticket) => emit('rowClick', ticket)"
+    @updated="reload"
+  />
   <!-- List View -->
   <ListView
     v-else-if="list.data?.data.length > 0"
@@ -174,6 +182,7 @@ import { useRoute, useRouter } from "vue-router";
 
 import EmptyState from "./EmptyState.vue";
 import ListRows from "./ListRows.vue";
+import TicketKanban from "./ticket/TicketKanban.vue";
 
 interface P {
   options: {
@@ -196,6 +205,7 @@ interface P {
     default_page_length?: number;
     isCustomerPortal?: boolean;
     rowRoute?: Record<string, string>;
+    viewMode?: "list" | "kanban";
   };
 }
 
@@ -228,6 +238,7 @@ const defaultOptions = reactive({
     name: "",
     prop: "",
   },
+  viewMode: "list",
   selectBannerActions: [
     {
       label: __("Delete"),

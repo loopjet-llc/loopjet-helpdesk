@@ -20,6 +20,9 @@ from helpdesk.helpdesk.doctype.hd_form_script.hd_form_script import get_form_scr
 from helpdesk.helpdesk.doctype.hd_settings.helpers import get_rendered_banner_msg
 from helpdesk.helpdesk.doctype.hd_ticket_template.api import get_fields_meta
 from helpdesk.helpdesk.doctype.hd_ticket_template.api import get_one as get_template
+from helpdesk.helpdesk.doctype.hd_ticket.recipients import (
+    get_public_comment_recipients as resolve_public_comment_recipients,
+)
 from helpdesk.utils import (
     agent_only,
     check_permissions,
@@ -751,6 +754,13 @@ def get_ticket_activities(ticket: str):
         "calls": get_call_logs(ticket),
     }
     return activities
+
+
+@frappe.whitelist()
+@agent_only
+def get_public_comment_recipients(ticket: str):
+    frappe.has_permission("HD Ticket", "read", ticket, throw=True)
+    return resolve_public_comment_recipients(frappe.get_doc("HD Ticket", ticket))
 
 
 @frappe.whitelist()

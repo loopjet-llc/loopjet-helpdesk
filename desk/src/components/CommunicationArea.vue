@@ -7,26 +7,26 @@
         <Button
           ref="sendEmailRef"
           variant="ghost"
-          label="Reply"
+          :label="__('Kommentar')"
           :class="[
             showEmailBox ? '!bg-surface-gray-4 hover:!bg-surface-gray-3' : '',
           ]"
           @click="toggleEmailBox()"
         >
           <template #prefix>
-            <EmailIcon class="h-4" />
+            <CommentIcon class="h-4" />
           </template>
         </Button>
         <Button
           variant="ghost"
-          label="Comment"
+          :label="__('Interner Kommentar')"
           :class="[
             showCommentBox ? '!bg-surface-gray-4 hover:!bg-surface-gray-3' : '',
           ]"
           @click="toggleCommentBox()"
         >
           <template #prefix>
-            <CommentIcon class="h-4" />
+            <LucideLockKeyhole class="h-4" />
           </template>
         </Button>
         <TypingIndicator :ticketId="ticketId" />
@@ -43,10 +43,15 @@
         <div class="overflow-hidden">
           <EmailEditor
             ref="emailEditorRef"
+            public-comment
             :label="
-              isMobileView ? 'Send' : isMac ? 'Send (⌘ + ⏎)' : 'Send (Ctrl + ⏎)'
+              isMobileView
+                ? __('Kommentar senden')
+                : isMac
+                ? __('Kommentar senden (⌘ + ⏎)')
+                : __('Kommentar senden (Ctrl + ⏎)')
             "
-            placeholder="Hi John, we are looking into this issue."
+            :placeholder="__('Kommentar für den Kunden schreiben …')"
             :ticketId="ticketId"
             :to-emails="toEmails"
             :cc-emails="ccEmails"
@@ -75,19 +80,27 @@
         @keydown.esc.capture.stop="showCommentBox = false"
       >
         <div class="overflow-hidden">
+          <div
+            class="mx-5 mt-3 flex items-center gap-2 rounded-lg bg-surface-amber-2 px-3 py-2 text-p-xs text-ink-amber-3"
+          >
+            <LucideLockKeyhole class="size-4 shrink-0" />
+            {{
+              __("Nur für Loopjet – wird nicht per E-Mail an Kunden gesendet.")
+            }}
+          </div>
           <CommentTextEditor
             ref="commentTextEditorRef"
             :label="
               isMobileView
-                ? 'Comment'
+                ? __('Intern speichern')
                 : isMac
-                ? 'Comment (⌘ + ⏎)'
-                : 'Comment (Ctrl + ⏎)'
+                ? __('Intern speichern (⌘ + ⏎)')
+                : __('Intern speichern (Ctrl + ⏎)')
             "
             :ticketId="ticketId"
             :editable="showCommentBox"
             :doctype="doctype"
-            placeholder="@John could you please look into this?"
+            :placeholder="__('Interne Notiz für das Loopjet-Team …')"
             @submit="
               () => {
                 showCommentBox = false;
@@ -108,13 +121,14 @@
 
 <script setup lang="ts">
 import { CommentTextEditor, EmailEditor, TypingIndicator } from "@/components";
-import { CommentIcon, EmailIcon } from "@/components/icons/";
+import { CommentIcon } from "@/components/icons/";
 import { useDevice } from "@/composables";
 import { useScreenSize } from "@/composables/screen";
 import { useShortcut } from "@/composables/shortcuts";
 import { showCommentBox, showEmailBox } from "@/pages/ticket/modalStates";
 import { onClickOutside } from "@vueuse/core";
 import { ref, watch } from "vue";
+import { __ } from "@/translation";
 
 const emit = defineEmits(["update"]);
 const content = defineModel("content");

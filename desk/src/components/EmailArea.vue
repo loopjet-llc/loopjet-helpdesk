@@ -51,14 +51,13 @@
           </Tooltip>
         </div>
         <div class="flex items-center gap-1">
-          <Button :tooltip="__('Reply')" variant="ghost" @click="reply">
+          <Button
+            :tooltip="__('Kommentar beantworten')"
+            variant="ghost"
+            @click="reply"
+          >
             <template #icon>
               <ReplyIcon class="text-ink-gray-7" />
-            </template>
-          </Button>
-          <Button :tooltip="__('Reply All')" variant="ghost" @click="replyAll">
-            <template #icon>
-              <ReplyAllIcon class="text-ink-gray-7" />
             </template>
           </Button>
           <Dropdown
@@ -84,17 +83,6 @@
     <!-- <div class="text-sm leading-5 text-ink-gray-5">
       {{ subject }}
     </div> -->
-    <div class="text-p-sm text-ink-gray-5">
-      <template
-        v-for="(val, label) in { To: to, cc: cc, bcc: bcc }"
-        :key="label"
-      >
-        <span v-if="val" class="mr-1.5">
-          <span class="mr-1 text-ink-gray-7">{{ label }}:</span>
-          <span> {{ normalizeAndFilter(val).join(", ") }}</span>
-        </span>
-      </template>
-    </div>
     <div class="border-0 border-t my-3 border-outline-gray-modals !-mx-3" />
     <EmailContent :content="content" />
     <div class="flex flex-wrap gap-2">
@@ -123,7 +111,7 @@ import { Dropdown } from "frappe-ui";
 import { storeToRefs } from "pinia";
 import { computed, inject, ref } from "vue";
 import LucideSplit from "~icons/lucide/split";
-import { ReplyAllIcon, ReplyIcon } from "./icons";
+import { ReplyIcon } from "./icons";
 import TicketSplitModal from "./ticket/TicketSplitModal.vue";
 
 const props = defineProps({
@@ -140,8 +128,6 @@ const props = defineProps({
 const {
   sender,
   to,
-  cc,
-  bcc,
   creation,
   subject,
   attachments,
@@ -174,66 +160,11 @@ const status = computed(() => {
   return { label: _status, color: indicator_color };
 });
 
-const normalizeAndFilter = (
-  field: string | string[],
-  valuesToExclude: string[] = []
-) => {
-  let arr = [];
-  let current = "";
-  let inQuotes = false;
-  if (typeof field === "string") {
-    for (let char of field) {
-      if (char === '"') {
-        inQuotes = !inQuotes;
-        current += char;
-      } else if (char === "," && !inQuotes) {
-        arr.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    if (current) arr.push(current.trim());
-  } else {
-    arr = field || [];
-  }
-  return arr.filter(Boolean).filter((item) => !valuesToExclude.includes(item));
-};
-
 const reply = () => {
   const user = auth.user.value;
   emit("reply", {
     content: content,
     to: user === sender.name ? to : sender.name,
-  });
-};
-
-const replyAll = () => {
-  const user = auth.user.value;
-  const exclude = [user, sender.name];
-  const filteredTo = normalizeAndFilter(to, exclude);
-  const filteredCc = normalizeAndFilter(cc, exclude);
-  const filteredBcc = normalizeAndFilter(bcc, exclude);
-
-  let _to, _cc, _bcc;
-
-  if (user === sender.name) {
-    // User is the sender, reply to all original recipients
-    _to = filteredTo.join(", ");
-    _cc = filteredCc;
-    _bcc = filteredBcc;
-  } else {
-    // User is a recipient, reply to sender with all other recipients in cc
-    _to = sender.name;
-    _cc = [...filteredTo, ...filteredCc];
-    _bcc = filteredBcc;
-  }
-
-  emit("reply", {
-    content: content,
-    to: _to,
-    cc: _cc.filter(Boolean),
-    bcc: _bcc.filter(Boolean),
   });
 };
 

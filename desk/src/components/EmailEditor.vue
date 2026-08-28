@@ -12,12 +12,44 @@
     :editable="editable"
     @change="editable ? (newEmail = $event) : null"
     :extensions="[ComponentUtils, HandleExcelPaste, CleanStyles]"
-    :uploadFunction="(file:any)=>uploadFunction(file, doctype, ticketId)"
+    :uploadFunction="(file: any) => uploadFunction(file, doctype, ticketId)"
     @keydown.capture="handleKeydown"
   >
     <template #top>
+      <div v-if="publicComment" class="mx-6 md:mx-5 space-y-3 border-y py-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-p-xs text-ink-gray-5">
+            {{ __("Benachrichtigung an") }}
+          </span>
+          <span
+            v-if="requester"
+            class="inline-flex items-center gap-1.5 rounded-full bg-surface-blue-2 px-2.5 py-1 text-p-xs font-medium text-ink-blue-3"
+          >
+            <LucideLockKeyhole class="size-3.5" />
+            {{ requester.label }}
+          </span>
+          <span
+            v-else-if="publicRecipients.loading"
+            class="text-p-xs text-ink-gray-5"
+          >
+            {{ __("Empfänger werden geladen …") }}
+          </span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <SearchMultiSelect
+            v-model="selectedAdditionalRecipients"
+            :options="additionalRecipientOptions"
+            :placeholder="__('Weitere Teammitglieder auswählen')"
+            :label="__('Kunden-Team durchsuchen')"
+            :selection-text="__('Empfänger ausgewählt')"
+          />
+          <span class="text-p-xs text-ink-gray-5">
+            {{ __("Der Ticketersteller wird immer benachrichtigt.") }}
+          </span>
+        </div>
+      </div>
       <div
-        v-if="hasMultipleSenders"
+        v-if="!publicComment && hasMultipleSenders"
         class="mx-6 md:mx-5 flex items-center gap-2 border-t py-2.5 h-12.5"
       >
         <span class="text-p-xs text-ink-gray-4">{{ __("From") }}:</span>
@@ -30,7 +62,10 @@
           :options="from"
         />
       </div>
-      <div class="mx-6 md:mx-5 flex items-center gap-2 border-y py-2.5">
+      <div
+        v-if="!publicComment"
+        class="mx-6 md:mx-5 flex items-center gap-2 border-y py-2.5"
+      >
         <span class="text-p-xs text-ink-gray-4">{{ __("To") }}:</span>
         <MultiSelectInput
           ref="toInput"
@@ -63,7 +98,7 @@
         </div>
       </div>
       <div
-        v-if="showCC || cc"
+        v-if="!publicComment && (showCC || cc)"
         class="mx-5 flex items-center gap-2 py-2.5"
         :class="cc || showCC ? 'border-b' : ''"
       >
@@ -77,7 +112,7 @@
         />
       </div>
       <div
-        v-if="showBCC || bcc"
+        v-if="!publicComment && (showBCC || bcc)"
         class="mx-5 flex items-center gap-2 py-2.5"
         :class="bcc || showBCC ? 'border-b' : ''"
       >
@@ -208,6 +243,7 @@ import {
   MultiSelectInput,
   SavedRepliesSelectorModal,
 } from "@/components";
+import SearchMultiSelect from "@/components/SearchMultiSelect.vue";
 import { AttachmentIcon } from "@/components/icons";
 import { useTyping } from "@/composables/realtime";
 import { getUserEmailInfo } from "@/composables/useUserEmailInfo";
@@ -280,6 +316,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  publicComment: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["submit", "discard"]);
@@ -298,7 +338,8 @@ function focusEditorAtStart() {
 }
 
 const cachedEmail = useStorage<null | string>(
-  "emailBoxContent" + props.ticketId,
+  (props.publicComment ? "publicCommentContent" : "emailBoxContent") +
+    props.ticketId,
   null
 );
 
@@ -346,6 +387,7 @@ watch(quotedContent, (newVal, oldVal) => {
 watch(
   () => userResource.data,
   (data: { email_signature?: string } | null) => {
+    if (props.publicComment) return;
     if (!data?.email_signature) return;
     emailSignature.value = `<br>${data.email_signature}`;
     if (isOnlySignature(cachedEmail.value)) {
@@ -379,6 +421,21 @@ const bcc = computed(() => (bccEmailsClone.value?.length ? true : false));
 const toInput = ref(null);
 const ccInput = ref(null);
 const bccInput = ref(null);
+
+const selectedAdditionalRecipients = ref<string[]>([]);
+const publicRecipients = createResource({
+  url: "helpdesk.helpdesk.doctype.hd_ticket.api.get_public_comment_recipients",
+  params: { ticket: props.ticketId },
+  auto: props.publicComment,
+});
+const requester = computed(() => publicRecipients.data?.requester || null);
+const additionalRecipientOptions = computed(() =>
+  (publicRecipients.data?.additional || []).map((recipient) => ({
+    value: recipient.email,
+    label: recipient.label,
+    image: recipient.image,
+  }))
+);
 
 function toggleCC() {
   showCC.value = !showCC.value;
@@ -453,19 +510,29 @@ const sendMail = createResource({
   makeParams: () => ({
     dt: props.doctype,
     dn: props.ticketId,
-    method: "reply_via_agent",
-    args: {
-      attachments: attachments.value.map((x) => x.name),
-      from_email: selectedFromEmail.value,
-      to: toEmailsClone.value.join(","),
-      cc: ccEmailsClone.value?.join(","),
-      bcc: bccEmailsClone.value?.join(","),
-      message:
-        newEmail.value +
-        (quotedContentRef.value
-          ? `<p class="reply-to-content"></p><blockquote>${quotedContentRef.value.innerHTML}</blockquote>`
-          : ""),
-    },
+    method: props.publicComment ? "post_public_comment" : "reply_via_agent",
+    args: props.publicComment
+      ? {
+          attachments: attachments.value.map((x) => x.name),
+          additional_recipients: selectedAdditionalRecipients.value,
+          content:
+            newEmail.value +
+            (quotedContentRef.value
+              ? `<p class="reply-to-content"></p><blockquote>${quotedContentRef.value.innerHTML}</blockquote>`
+              : ""),
+        }
+      : {
+          attachments: attachments.value.map((x) => x.name),
+          from_email: selectedFromEmail.value,
+          to: toEmailsClone.value.join(","),
+          cc: ccEmailsClone.value?.join(","),
+          bcc: bccEmailsClone.value?.join(","),
+          message:
+            newEmail.value +
+            (quotedContentRef.value
+              ? `<p class="reply-to-content"></p><blockquote>${quotedContentRef.value.innerHTML}</blockquote>`
+              : ""),
+        },
   }),
   onSuccess: () => {
     resetState();
@@ -484,33 +551,37 @@ const isDisabled = computed(
   () =>
     (isContentEmpty(newEmail.value) && isContentEmpty(quotedContent.value)) ||
     sendMail.loading ||
-    isUploading.value
+    isUploading.value ||
+    (props.publicComment && (publicRecipients.loading || !requester.value))
 );
 
 function submitMail() {
   if (isContentEmpty(newEmail.value) && isContentEmpty(quotedContent.value)) {
     return false;
   }
-  const pendingRecipientsAreValid = [toInput, ccInput, bccInput]
-    .map((input) => input.value?.commitPendingValue?.() ?? true)
-    .every(Boolean);
-  if (!pendingRecipientsAreValid) return false;
+  if (!props.publicComment) {
+    const pendingRecipientsAreValid = [toInput, ccInput, bccInput]
+      .map((input) => input.value?.commitPendingValue?.() ?? true)
+      .every(Boolean);
+    if (!pendingRecipientsAreValid) return false;
 
-  if (
-    !toEmailsClone.value.length &&
-    !ccEmailsClone.value.length &&
-    !bccEmailsClone.value.length
-  ) {
-    toast.warning(
-      "Email has no recipients. Please add at least one recipient (To, Cc, or Bcc) before sending."
-    );
-    return false;
+    if (
+      !toEmailsClone.value.length &&
+      !ccEmailsClone.value.length &&
+      !bccEmailsClone.value.length
+    ) {
+      toast.warning(
+        "Email has no recipients. Please add at least one recipient (To, Cc, or Bcc) before sending."
+      );
+      return false;
+    }
   }
 
   sendMail.submit();
 }
 
 function getInitialContent() {
+  if (props.publicComment) return "<p></p>";
   return emailSignature.value ? emailSignature.value : "<p></p>";
 }
 
@@ -520,9 +591,11 @@ function addToReply(
   ccEmails: string[],
   bccEmails: string[]
 ) {
-  toEmailsClone.value = toEmails;
-  ccEmailsClone.value = ccEmails;
-  bccEmailsClone.value = bccEmails;
+  if (!props.publicComment) {
+    toEmailsClone.value = toEmails;
+    ccEmailsClone.value = ccEmails;
+    bccEmailsClone.value = bccEmails;
+  }
 
   if (body !== quotedContent.value) {
     //trigger change for watch when replied to body data is different from current quoted content
@@ -540,8 +613,13 @@ function addToReply(
 }
 
 function resetState() {
-  newEmail.value = emailSignature.value ? emailSignature.value : null;
+  newEmail.value = props.publicComment
+    ? null
+    : emailSignature.value
+    ? emailSignature.value
+    : null;
   attachments.value = [];
+  selectedAdditionalRecipients.value = [];
   quotedContent.value = null;
   toEmailsClone.value = [...props.toEmails];
   ccEmailsClone.value = [...props.ccEmails];

@@ -2,6 +2,7 @@
 # See license.txt
 
 from datetime import timedelta
+from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -749,7 +750,6 @@ class TestHDTicket(FrappeTestCase):
         cc_recipient = "cc_combo@test.com"
         bcc_recipient = "bcc_combo@test.com"
         ticket.reply_via_agent(message="Test reply", cc=cc_recipient, bcc=bcc_recipient)
-        comm = get_latest_ticket_communication(ticket.name)
         communication_doc = get_latest_ticket_communication(ticket.name)
         if hasattr(communication_doc, "to") and communication_doc.to:
             self.assertFalse(communication_doc.to)
@@ -757,6 +757,66 @@ class TestHDTicket(FrappeTestCase):
             self.assertEqual(communication_doc.cc, cc_recipient)
         if hasattr(communication_doc, "bcc") and communication_doc.bcc:
             self.assertEqual(communication_doc.bcc, bcc_recipient)
+
+    def test_public_comment_always_notifies_requester_and_selected_customer_users(self):
+        ticket = make_ticket(raised_by="requester@example.com")
+        recipient_options = {
+            "requester": {
+                "email": "requester@example.com",
+                "label": "Requester",
+                "is_requester": True,
+            },
+            "additional": [
+                {
+                    "email": "colleague@example.com",
+                    "label": "Colleague",
+                    "is_requester": False,
+                }
+            ],
+        }
+
+        with (
+            patch(
+                "helpdesk.helpdesk.doctype.hd_ticket.recipients.get_public_comment_recipients",
+                return_value=recipient_options,
+            ),
+            patch.object(ticket, "reply_via_agent") as reply,
+        ):
+            ticket.post_public_comment(
+                "<p>Public update</p>",
+                additional_recipients=["COLLEAGUE@example.com"],
+                attachments=["FILE-0001"],
+            )
+
+        reply.assert_called_once_with(
+            message="<p>Public update</p>",
+            to="requester@example.com",
+            cc="colleague@example.com",
+            attachments=["FILE-0001"],
+        )
+
+    def test_public_comment_rejects_recipient_outside_customer(self):
+        ticket = make_ticket(raised_by="requester@example.com")
+        recipient_options = {
+            "requester": {
+                "email": "requester@example.com",
+                "label": "Requester",
+                "is_requester": True,
+            },
+            "additional": [],
+        }
+
+        with (
+            patch(
+                "helpdesk.helpdesk.doctype.hd_ticket.recipients.get_public_comment_recipients",
+                return_value=recipient_options,
+            ),
+            self.assertRaises(frappe.PermissionError),
+        ):
+            ticket.post_public_comment(
+                "<p>Public update</p>",
+                additional_recipients=["outsider@example.com"],
+            )
 
     def test_security_unauthorized_reply_via_agent(self):
         ticket = make_ticket()

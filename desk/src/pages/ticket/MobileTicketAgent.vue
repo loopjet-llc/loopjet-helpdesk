@@ -193,9 +193,7 @@ import {
 import { CommunicationArea, LayoutHeader } from "@/components";
 import {
   ActivityIcon,
-  CommentIcon,
   DetailsIcon,
-  EmailIcon,
   IndicatorIcon,
   PhoneIcon,
 } from "@/components/icons";
@@ -443,25 +441,15 @@ const tabs: ComputedRef<TabObject[]> = computed(() => {
     },
     {
       name: "activity",
-      label: __("Activity"),
+      label: __("Verlauf"),
       icon: ActivityIcon,
-    },
-    {
-      name: "email",
-      label: __("Emails"),
-      icon: EmailIcon,
-    },
-    {
-      name: "comment",
-      label: __("Comments"),
-      icon: CommentIcon,
     },
   ];
 
   if (isCallingEnabled.value) {
     _tabs.push({
       name: "call",
-      label: __("Calls"),
+      label: __("Anrufe"),
       icon: PhoneIcon,
     });
   }

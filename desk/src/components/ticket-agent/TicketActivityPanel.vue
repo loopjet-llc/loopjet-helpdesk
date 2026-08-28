@@ -49,14 +49,10 @@
 
 <script setup lang="ts">
 import CommunicationArea from "@/components/CommunicationArea.vue";
-import {
-  ActivityIcon,
-  CommentIcon,
-  EmailIcon,
-  PhoneIcon,
-} from "@/components/icons";
+import { ActivityIcon, PhoneIcon } from "@/components/icons";
 import { useActiveTabManager } from "@/composables/useActiveTabManager";
 import { useTelephonyStore } from "@/stores/telephony";
+import { __ } from "@/translation";
 import {
   ActivitiesSymbol,
   FeedbackActivity,
@@ -85,25 +81,15 @@ const tabs: ComputedRef<TabObject[]> = computed(() => {
   const _tabs: TabObject[] = [
     {
       name: "activity",
-      label: "Activity",
+      label: __("Verlauf"),
       icon: ActivityIcon,
-    },
-    {
-      name: "email",
-      label: "Emails",
-      icon: EmailIcon,
-    },
-    {
-      name: "comment",
-      label: "Comments",
-      icon: CommentIcon,
     },
   ];
 
   if (isCallingEnabled.value) {
     _tabs.push({
       name: "call",
-      label: "Calls",
+      label: __("Anrufe"),
       icon: PhoneIcon,
     });
   }

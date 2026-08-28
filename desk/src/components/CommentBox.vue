@@ -11,7 +11,10 @@
           <span class="font-medium text-ink-gray-8">
             {{ commenter }}
           </span>
-          <span> {{ __(" commented") }}</span>
+          <span class="inline-flex items-center gap-1">
+            <LucideLockKeyhole class="size-3.5" />
+            {{ __("Interner Kommentar") }}
+          </span>
         </p>
       </div>
       <div class="flex items-center gap-1">
@@ -37,7 +40,7 @@
     </div>
     <div
       :id="`comment-${name}`"
-      class="rounded-md bg-surface-gray-1 transition-colors px-3 py-[6px] pt-1"
+      class="rounded-md bg-surface-amber-2 transition-colors px-3 py-[6px] pt-1"
     >
       <TextEditor
         :editor-class="[
