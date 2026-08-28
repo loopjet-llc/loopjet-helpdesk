@@ -2,7 +2,7 @@
   <div
     :id="`communication-${name}`"
     v-bind="$attrs"
-    class="grow cursor-pointer bg-surface-white rounded-md text-base leading-6 transition-all duration-300 ease-in-out border border-outline-gray-2"
+    class="min-w-0 w-full grow cursor-pointer overflow-hidden rounded-md border border-outline-gray-2 bg-surface-white text-base leading-6 transition-all duration-300 ease-in-out"
   >
     <div
       class="flex items-center justify-between gap-2"
@@ -23,16 +23,16 @@
         </div>
       </div>
       <!-- email design for desktop -->
-      <div v-else class="flex items-center gap-1">
-        <span>{{ sender.full_name || "Guest" }}</span>
+      <div v-else class="flex min-w-0 items-center gap-1">
+        <span class="truncate">{{ sender.full_name || "Guest" }}</span>
         <span
-          class="sm:flex hidden text-sm text-ink-gray-5"
+          class="hidden min-w-0 truncate text-sm text-ink-gray-5 sm:flex"
           v-if="sender.name"
           >{{ "<" + sender.name + ">" }}</span
         >
       </div>
 
-      <div class="flex gap-2 items-center">
+      <div class="flex shrink-0 items-center gap-2">
         <div class="gap-0.5 flex items-center">
           <Badge
             v-if="status.label && !ticket?.doc?.via_customer_portal"

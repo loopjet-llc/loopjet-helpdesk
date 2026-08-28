@@ -177,7 +177,27 @@ const htmlContent = computed(
         display: block;
       }
       .email-content {
+        max-width: 100%;
+        overflow-wrap: anywhere;
         word-break: break-word;
+      }
+      html, body {
+        margin: 0;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+      .email-content img {
+        height: auto !important;
+        max-width: 100% !important;
+      }
+      .email-content table {
+        display: block;
+        max-width: 100% !important;
+        overflow-x: auto;
+      }
+      .email-content pre {
+        max-width: 100%;
+        white-space: pre-wrap;
       }
       .email-content :is(:where(img):not(:where([class~='not-prose'], [class~='not-prose'] *))) {
         border-width: 0;

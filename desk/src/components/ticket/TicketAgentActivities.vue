@@ -14,7 +14,7 @@
       >
         <!-- single activity -->
         <div
-          class="w-full px-6 md:px-5 grid grid-cols-[30px_minmax(auto,_1fr)] gap-2 sm:gap-4"
+          class="grid w-full grid-cols-[30px_minmax(0,_1fr)] gap-2 px-6 sm:gap-4 md:px-5"
         >
           <div
             class="relative flex justify-center after:absolute after:left-[50%] after:top-3 after:-z-10 after:border-l after:border-outline-gray-modals"
@@ -63,7 +63,7 @@
             </div>
           </div>
           <div
-            class="mb-4 flex flex-1"
+            class="mb-4 flex min-w-0 flex-1"
             :class="[
               i == activities.length - 1 && 'mb-5',
               !['email', 'feedback', 'call', 'comment'].includes(

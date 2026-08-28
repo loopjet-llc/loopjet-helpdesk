@@ -182,6 +182,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   hideLabel: false,
 });
+const emit = defineEmits<{ updated: [] }>();
 
 const { hideLabel } = props;
 
@@ -492,6 +493,7 @@ async function assignSelf() {
     toast.success(__("Assignee's updated successfully."));
     assignees.value.reload();
     activities.value.reload();
+    emit("updated");
   } catch {
     toast.error(__("Failed to update Assignee's."));
     localAssignees.value = localAssignees.value.filter(
@@ -576,6 +578,7 @@ async function saveAssignees(added: string[], removed: string[]) {
 
     assignees.value.reload();
     activities.value.reload();
+    emit("updated");
   } catch {
     toast.error(__("Failed to update Assignees."));
     localAssignees.value = [...snapshotAssignees.value];
