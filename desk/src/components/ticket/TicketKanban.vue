@@ -1,12 +1,12 @@
 <template>
   <div
-    class="flex min-h-0 flex-1 overflow-x-auto bg-surface-gray-1 px-4 pb-5 pt-2 sm:px-5"
+    class="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden bg-surface-gray-1 px-4 pb-5 pt-2 sm:px-5"
   >
-    <div class="flex min-w-max gap-4">
+    <div class="flex h-full min-h-0 min-w-max gap-4">
       <section
         v-for="column in columns"
         :key="column.name"
-        class="flex w-[19rem] flex-col"
+        class="flex h-full min-h-0 w-[19rem] flex-col"
       >
         <header class="mb-2 flex h-9 items-center justify-between px-1">
           <div class="flex min-w-0 items-center gap-2">
@@ -31,7 +31,7 @@
           :disabled="isCustomerPortal"
           ghost-class="opacity-40"
           drag-class="shadow-lg"
-          class="min-h-36 flex-1 space-y-2.5 rounded-xl bg-surface-gray-2 p-2"
+          class="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl bg-surface-gray-2 p-2"
           @change="(event) => handleMove(column.name, event)"
         >
           <template #item="{ element: ticket }">
