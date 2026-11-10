@@ -11,6 +11,7 @@ from helpdesk.utils import (
     call_log_default_columns,
     check_permissions,
     contact_default_columns,
+    is_agent,
     parse_call_logs,
 )
 
@@ -106,16 +107,41 @@ def get_list_data(
     rows.append("name") if "name" not in rows else rows
     if doctype == "HD Ticket":
         rows.append("_seen") if "_seen" not in rows else rows
+
+    show_reporter = (
+        doctype == "HD Ticket" and not show_customer_portal_fields and is_agent()
+    )
+    query_fields = rows
+    if show_reporter:
+        query_fields = [
+            *rows,
+            "raised_by as reporter_email",
+            "contact.full_name as reporter_contact_name",
+            "contact.email_id as reporter_contact_email",
+        ]
+
     data = (
         frappe.get_list(
             doctype,
-            fields=rows,
+            fields=query_fields,
             filters=filters,
             order_by=order_by,
             page_length=page_length,
         )
         or []
     )
+
+    if show_reporter:
+        for ticket in data:
+            email = ticket.pop("reporter_email", None) or ""
+            contact_email = ticket.pop("reporter_contact_email", None) or ""
+            contact_name = ticket.pop("reporter_contact_name", None)
+            ticket["reporter_name"] = (
+                contact_name
+                if contact_name
+                and (not email or email.casefold() == contact_email.casefold())
+                else email
+            )
 
     if doctype == "TP Call Log":
         data = parse_call_logs(data)
