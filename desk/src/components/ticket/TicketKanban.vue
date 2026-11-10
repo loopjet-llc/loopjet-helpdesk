@@ -31,7 +31,7 @@
           :disabled="isCustomerPortal"
           ghost-class="opacity-40"
           drag-class="shadow-lg"
-          class="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl bg-surface-gray-2 p-2"
+          class="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl bg-surface-gray-2 p-2"
           @change="(event) => handleMove(column.name, event)"
         >
           <template #item="{ element: ticket }">
@@ -59,6 +59,16 @@
               </h3>
               <p class="mt-1 truncate text-p-xs text-ink-gray-5">
                 {{ ticket.customer || ticket.contact || __("Kein Kunde") }}
+              </p>
+              <p
+                v-if="!isCustomerPortal && ticket.reporter_name"
+                class="mt-1 truncate text-p-xs text-ink-gray-5"
+                :title="ticket.reporter_name"
+              >
+                {{ __("Gemeldet von") }} ·
+                <span class="font-medium text-ink-gray-7">
+                  {{ ticket.reporter_name }}
+                </span>
               </p>
 
               <div
