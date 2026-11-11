@@ -190,18 +190,16 @@
 import TicketActivityPanel from "@/components/ticket-agent/TicketActivityPanel.vue";
 import AssignTo from "@/components/ticket-agent/AssignTo.vue";
 import { reloadTicketFeed, useTicket } from "@/composables/useTicket";
+import {
+  PRIORITY_DISPLAY_ORDER,
+  useTicketPriorityStore,
+} from "@/stores/ticketPriority";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
 import { AssigneeSymbol, TicketSymbol } from "@/types";
 import { isContentEmpty, uploadFunction } from "@/utils";
 import { useStorage } from "@vueuse/core";
-import {
-  Button,
-  createListResource,
-  createResource,
-  LoadingIndicator,
-  toast,
-} from "frappe-ui";
+import { Button, createResource, LoadingIndicator, toast } from "frappe-ui";
 import { computed, onMounted, onUnmounted, provide, ref } from "vue";
 import TicketConversation from "@/pages/ticket/TicketConversation.vue";
 import TicketTextEditor from "@/pages/ticket/TicketTextEditor.vue";
@@ -229,17 +227,18 @@ const agentAssignees = computed(() => agentTicketComposable?.assignees);
 provide(TicketSymbol, agentTicket as any);
 provide(AssigneeSymbol, agentAssignees as any);
 
-const priorities = createListResource({
-  doctype: "HD Ticket Priority",
-  fields: ["name", "integer_value"],
-  filters: { disabled: 0 },
-  orderBy: "integer_value desc",
-  pageLength: 100,
-  auto: !props.isCustomerPortal,
-  cache: ["HD Ticket Priority", "drawer"],
-});
+const priorities = props.isCustomerPortal
+  ? null
+  : useTicketPriorityStore().priorities;
 const priorityOptions = computed<string[]>(() =>
-  (priorities.data || []).map((priority) => priority.name)
+  (priorities?.data || [])
+    .filter((priority) => !priority.disabled)
+    .sort(
+      (a, b) =>
+        (PRIORITY_DISPLAY_ORDER[b.level] ?? -1) -
+        (PRIORITY_DISPLAY_ORDER[a.level] ?? -1)
+    )
+    .map((priority) => priority.name)
 );
 
 const viewportWidth = ref(window.innerWidth);
@@ -315,7 +314,7 @@ function handleViewportResize() {
 
 const customerTicket = createResource({
   url: "helpdesk.helpdesk.doctype.hd_ticket.api.get_one",
-  params: { name: props.ticketId, is_customer_portal: true },
+  params: { name: props.ticketId },
   auto: props.isCustomerPortal,
   onError: () => toast.error(__("Ticket konnte nicht geladen werden.")),
 });
