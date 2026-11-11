@@ -17,7 +17,7 @@
             <span class="truncate text-sm font-semibold text-ink-gray-8">
               {{ statusLabel(column.status) }}
             </span>
-            <span class="text-p-xs text-ink-gray-5">{{
+            <span class="text-p-xs text-ink-gray-6">{{
               column.tickets.length
             }}</span>
           </div>
@@ -41,7 +41,7 @@
               @click="emit('open', ticket.name)"
             >
               <div class="mb-2 flex items-center justify-between gap-2">
-                <span class="text-p-xs font-medium text-ink-gray-5"
+                <span class="text-p-xs font-medium text-ink-gray-6"
                   >#{{ ticket.name }}</span
                 >
                 <span
@@ -57,12 +57,12 @@
               >
                 {{ ticket.subject }}
               </h3>
-              <p class="mt-1 truncate text-p-xs text-ink-gray-5">
+              <p class="mt-1 truncate text-p-xs text-ink-gray-6">
                 {{ ticket.customer || ticket.contact || __("Kein Kunde") }}
               </p>
               <p
                 v-if="!isCustomerPortal && ticket.reporter_name"
-                class="mt-1 truncate text-p-xs text-ink-gray-5"
+                class="mt-1 truncate text-p-xs text-ink-gray-6"
                 :title="ticket.reporter_name"
               >
                 {{ __("Gemeldet von") }} ·
@@ -83,17 +83,17 @@
               <div class="mt-3 flex items-center justify-between border-t pt-3">
                 <div class="flex min-w-0 items-center gap-2">
                   <span
-                    class="grid size-6 shrink-0 place-items-center rounded-full bg-surface-blue-2 text-[10px] font-semibold text-ink-blue-3"
+                    class="grid size-6 shrink-0 place-items-center rounded-full bg-surface-blue-2 text-[10px] font-semibold text-ink-blue-8"
                   >
                     {{ assigneeInitials(ticket._assign) }}
                   </span>
-                  <span class="truncate text-p-xs text-ink-gray-5">
+                  <span class="truncate text-p-xs text-ink-gray-6">
                     {{ assigneeLabel(ticket._assign) }}
                   </span>
                 </div>
                 <span
                   v-if="!isSeen(ticket)"
-                  class="size-2 shrink-0 rounded-full bg-surface-blue-5"
+                  class="size-2 shrink-0 rounded-full bg-surface-blue-7"
                   :title="__('Ungelesen')"
                 />
               </div>
@@ -180,23 +180,23 @@ function statusLabel(status) {
 }
 
 function statusDot(status) {
-  return status.parsed_color?.replace("text-", "bg-") || "bg-surface-gray-5";
+  return status.parsed_color?.replace("text-", "bg-") || "bg-surface-gray-7";
 }
 
 function priorityClass(priority: string) {
   const normalized = priority.toLowerCase();
   if (["urgent", "dringend"].includes(normalized)) {
-    return "bg-surface-red-1 text-ink-red-3";
+    return "bg-surface-red-1 text-ink-red-7";
   }
   if (["high", "hoch"].includes(normalized)) {
-    return "bg-surface-amber-1 text-ink-amber-3";
+    return "bg-surface-amber-1 text-ink-amber-8";
   }
   return "bg-surface-gray-2 text-ink-gray-6";
 }
 
 function slaClass(status: string) {
-  if (status === "Failed") return "bg-surface-red-1 text-ink-red-3";
-  if (status === "Paused") return "bg-surface-amber-2 text-ink-amber-3";
+  if (status === "Failed") return "bg-surface-red-1 text-ink-red-7";
+  if (status === "Paused") return "bg-surface-amber-2 text-ink-amber-8";
   return "bg-surface-gray-2 text-ink-gray-6";
 }
 
