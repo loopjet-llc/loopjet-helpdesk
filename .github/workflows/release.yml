@@ -22,6 +22,9 @@ permissions:
 jobs:
   regen-notes:
     name: 'Regenerate release notes'
+    # This upstream job writes to frappe/helpdesk with its private release token.
+    # Loopjet releases use reviewed notes supplied by our platform release flow.
+    if: github.repository == 'frappe/helpdesk'
     runs-on: ubuntu-latest
 
     steps:
