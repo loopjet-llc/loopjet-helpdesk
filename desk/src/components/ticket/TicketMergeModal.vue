@@ -10,49 +10,53 @@
           }}
           <span class="whitespace-nowrap font-semibold">
             #{{ ticket.name
-            }}<Popover
-              trigger="hover"
-              :hoverDelay="0.25"
-              :placement="isRtl ? 'left' : 'right'"
-              class="!inline-flex align-middle ms-1 -mt-1"
-            >
-              <template #target>
-                <FeatherIcon name="info" class="size-4 cursor-pointer" />
+            }}<HoverCard :hoverDelay="250" :side="isRtl ? 'left' : 'right'">
+              <template #trigger>
+                <LucideInfo
+                  class="size-4 cursor-pointer !inline-flex align-middle ms-1 -mt-1"
+                />
               </template>
 
-              <template #body-main>
+              <template #default>
                 <div
-                  class="text-sm text-ink-gray-6 p-2.5 bg-surface-white rounded-md max-w-[30rem] whitespace-pre-wrap leading-5"
+                  class="text-sm text-ink-gray-6 p-2.5 bg-surface-base rounded-5 max-w-[30rem] whitespace-pre-wrap leading-5"
                 >
                   <span class="text-p-base">
                     {{
                       __("Tickets must meet the following conditions:")
                     }}</span
                   >
-                  <ul class="list-disc pl-4 mt-1 space-y-1">
-                    <li
-                      v-for="(condition, index) in mergeConditions"
-                      :key="index"
-                    >
-                      {{ __(condition.text) }}
-                      <code
-                        v-if="condition.code"
-                        class="bg-surface-gray-2 rounded-md px-1 py-0.5"
+                  <ul class="list-disc ps-4 mt-1 space-y-1">
+                    <li>
+                      {{ __("Ticket must be Open or Paused.") }}
+                      <code class="bg-surface-gray-2 rounded-md px-1 py-0.5">
+                        {{ __("status_category in ['Open', 'Paused']") }}</code
                       >
-                        {{ __(condition.code) }}
-                      </code>
+                    </li>
+                    <li>
+                      {{ __("Ticket must not already be merged.") }}
+                      <code class="bg-surface-gray-2 rounded-md px-1 py-0.5">
+                        {{ __("is_merged === 0") }}</code
+                      >
+                    </li>
+                    <li>
+                      {{
+                        __(
+                          "Source and target tickets which are to be merged cannot be the same."
+                        )
+                      }}
                     </li>
                   </ul>
                 </div>
               </template>
-            </Popover>
+            </HoverCard>
           </span>
         </p>
 
         <Link
           class="form-control"
           doctype="HD Ticket"
-          placeholder="Select Ticket"
+          :placeholder="__('Select Ticket')"
           :filters="getDefaultFilters()"
           :label="__('Ticket')"
           :page-length="10"
@@ -69,13 +73,13 @@
         />
         <!-- banner -->
         <div
-          class="flex items-center gap-2 rounded-md p-2 ring-1 ring-outline-gray-modals"
+          class="flex items-center gap-2 rounded-5 p-2 ring-1 ring-outline-elevation-2"
         >
           <TriangleAlert
-            class="h-6 w-5 w-min-5 w-max-5 min-h-5 max-w-5 text-yellow-500"
+            class="h-6 w-5 w-min-5 w-max-5 min-h-5 max-w-5 text-ink-yellow-5"
           />
 
-          <div class="text-wrap text-sm text-ink-gray-7">
+          <div class="text-wrap text-sm text-ink-gray-6">
             {{ __("This action is irreversible.") }}
           </div>
         </div>
@@ -97,14 +101,16 @@
 </template>
 
 <script setup lang="ts">
+import LucideInfo from "~icons/lucide/info";
 import { Link } from "@/components";
 import { __ } from "@/translation";
 import { HDTicket } from "@/types/doctypes";
+import { getErrorMessage } from "@/utils";
 import {
-  Dialog,
   createListResource,
   createResource,
-  Popover,
+  Dialog,
+  HoverCard,
   toast,
 } from "frappe-ui";
 import { ref, watch } from "vue";
@@ -200,6 +206,15 @@ const mergeTicket = createResource({
     );
     targetTicket.value = null;
   },
+  onError: (error: any) => {
+    // A lost response (e.g. a proxy timeout) has no exc_type, yet the merge may have landed.
+    toast.error(
+      error.exc_type
+        ? getErrorMessage(error)
+        : __("Could not confirm the merge. Reloading the ticket.")
+    );
+    emit("update");
+  },
 });
 
 const getTicketSubject = createListResource({
@@ -215,6 +230,13 @@ const getTicketSubject = createListResource({
   },
 });
 
+function handleTicketMerge() {
+  mergeTicket.submit({
+    source: props.ticket.name,
+    target: targetTicket.value,
+  });
+}
+
 watch(
   () => targetTicket.value,
   (newValue) => {
@@ -229,12 +251,12 @@ watch(
   }
 );
 
-function handleTicketMerge() {
-  mergeTicket.submit({
-    source: props.ticket.name,
-    target: targetTicket.value,
-  });
-}
+watch(
+  () => props.ticket.is_merged,
+  (isMerged) => {
+    if (isMerged) showDialog.value = false;
+  }
+);
 </script>
 
 <style scoped></style>

@@ -1,6 +1,6 @@
 import { Dayjs } from "dayjs";
 import { Component, ComputedRef, InjectionKey, Ref } from "vue";
-import type { AssignmentRule, HDTicket } from "./types/doctypes";
+import type { AssignmentRule, HDCustomer, HDTicket } from "./types/doctypes";
 
 interface ResourceOptions<T = any> {
   method?: string;
@@ -118,6 +118,7 @@ export interface ListResource<T = any> {
   setValue: Resource<T>;
   delete: Resource<T>;
   runDocMethod: Resource<T>;
+  loading: boolean;
   update: (updatedOptions: Partial<ListResourceOptions>) => void;
   fetch: () => void;
   reload: () => Promise<T[]>;
@@ -246,7 +247,6 @@ export interface AutoCompleteItem {
 export interface Field {
   fieldname: string;
   fieldtype: string;
-  hide_from_customer?: 0 | 1;
   label: string;
   options: string;
   required: 0 | 1;
@@ -287,17 +287,6 @@ export type File = {
   attached_to_name?: string;
 };
 
-export type Notification = {
-  creation: string;
-  name: string;
-  notification_type: string;
-  read: boolean;
-  reference_comment: string;
-  reference_ticket: string;
-  user_from: UserInfo;
-  user_to: UserInfo;
-};
-
 export type UserInfo = {
   email: string;
   image: string;
@@ -312,18 +301,8 @@ export interface RenderField {
   description?: string;
 }
 
-export type EmailServiceName =
-  | "GMail"
-  | "Outlook"
-  | "Sendgrid"
-  | "SparkPost"
-  | "Yahoo"
-  | "Yandex"
-  | "Frappe Mail"
-  | "Custom";
-
 export interface EmailService {
-  name: EmailServiceName;
+  name: string;
   icon: string;
   info: string;
   link: string;
@@ -333,16 +312,6 @@ export interface EmailService {
 export type EmailStep = "email-list" | "email-add" | "email-edit";
 
 export interface EmailAccount {
-  smtp_server: string;
-  incoming_port: string;
-  smtp_port: string;
-  use_ssl: boolean;
-  use_starttls: boolean;
-  use_tls: boolean;
-  use_ssl_for_outgoing: boolean;
-  validate_ssl_certificate: boolean;
-  email_server: string;
-  domain: string;
   email_account_name: string;
   email_id: string;
   service: string;
@@ -354,39 +323,20 @@ export interface EmailAccount {
   enable_incoming?: boolean;
   default_outgoing?: boolean;
   default_incoming?: boolean;
-  validate_ssl_certificate_for_outgoing: boolean;
 }
 
-export type EmailAccountFormState = {
-  email_account_name?: string;
-  email_id?: string;
-  service?: string;
-  password?: string;
-  api_key?: string;
-  api_secret?: string;
-  frappe_mail_site?: string;
-  domain?: string;
-  email_server?: string;
-  incoming_port?: string | number;
-  smtp_server?: string;
-  smtp_port?: string | number;
-  use_ssl?: boolean | number;
-  use_starttls?: boolean | number;
-  use_tls?: boolean | number;
-  use_ssl_for_outgoing?: boolean | number;
-  validate_ssl_certificate?: boolean | number;
-  validate_ssl_certificate_for_outgoing?: boolean | number;
-  attachment_limit?: string | number;
-  append_emails_to_sent_folder?: boolean | number;
-  sent_folder_name?: string;
-};
-
-export type TicketTab = "activity" | "email" | "comment" | "details" | "call";
+export type TicketTab =
+  | "activity"
+  | "email"
+  | "comment"
+  | "details"
+  | "call"
+  | "analytics";
 
 export interface TabObject {
-  name: TicketTab;
+  value: TicketTab;
   label: string;
-  icon: Component;
+  iconLeft: Component;
   condition?: () => boolean;
 }
 
@@ -444,9 +394,8 @@ export interface View {
   pinned?: boolean;
   public?: boolean;
   group_by_field?: string;
-  name?: string;
+  name: string;
   is_customer_portal?: boolean;
-  is_standard?: boolean;
 }
 
 export interface ViewType {
@@ -463,70 +412,6 @@ export interface Breadcrumb {
   };
 }
 
-// Activity Types
-interface BaseActivity {
-  type: string;
-  key: string;
-  creation: string;
-  content: string;
-}
-
-interface HistoryActivity extends BaseActivity {
-  type: "history";
-  user: string;
-  relatedActivities: HistoryActivity[];
-}
-
-export interface EmailActivity extends BaseActivity {
-  type: "email";
-  attachments: FileAttachment;
-  bcc: string;
-  cc: string;
-  name: string;
-  sender: { full_name: string; name: string };
-  subject: string;
-  to: string;
-  isFirstEmail: boolean;
-}
-
-export interface CommentActivity extends BaseActivity {
-  type: "comment";
-  name: string;
-  commenter: string;
-  commentedBy: string;
-  attachments: FileAttachment[];
-}
-
-export interface CallActivity extends BaseActivity {
-  type: "call";
-  name: string;
-  caller: string;
-  calledBy: string;
-  attachments: FileAttachment[];
-  call_type: "Incoming" | "Outgoing";
-}
-
-export interface FeedbackActivity {
-  type: "feedback";
-  feedback_rating: number;
-  feedback: string; // option seletor
-  feedback_extra?: string; // free flow text
-  sender: { name: string; full_name: string };
-  key: string;
-}
-
-export type TicketActivity =
-  | HistoryActivity
-  | EmailActivity
-  | CommentActivity
-  | CallActivity
-  | FeedbackActivity;
-
-interface FileAttachment {
-  name: string;
-  file_name: string;
-  file_url: string;
-}
 
 export interface FieldCriteriaState {
   selectedParentField: string;
@@ -615,11 +500,11 @@ export interface DocumentResource<T = unknown> {
 }
 
 export interface Customizations {
-  custom_fields: {
+  fields: {
     fieldname: string;
-    required: number;
-    placeholder: string;
-    url_method: string;
+    required?: number;
+    placeholder?: string;
+    url_method?: string;
   }[];
   _form_script: string[];
   _customActions?: any;
@@ -634,6 +519,23 @@ export interface TicketContact {
   image: string;
 }
 
+// A ticket assignee enriched with their agent status by get_ticket_assignees.
+// Non-agent assignees only carry `name`.
+export interface TicketAssignee {
+  name: string;
+  agent_name?: string;
+  user_image?: string;
+  availability?: string;
+  availability_changed_on?: string;
+}
+
+// A TicketAssignee plus the option fields AssignTo keeps when an agent is
+// picked from the dropdown (image/label come from AgentOption).
+export interface LocalAssignee extends TicketAssignee {
+  image?: string;
+  label?: string;
+}
+
 export type RecentTicket = Record<
   "subject" | "status" | "priority" | "name" | "creation",
   string
@@ -646,14 +548,6 @@ export interface RecentSimilarTicket {
   recent_tickets: RecentTicket[];
   similar_tickets: SimilarTicket[];
 }
-
-export interface TicketActivities {
-  comments: Comment[];
-  communications: Communication[];
-  history: Activity[];
-  views: ViewLog[];
-}
-
 
 export interface HDSettings {
   brandName: string;
@@ -687,6 +581,8 @@ export interface SlaPolicy {
   description: string;
   default_sla: boolean;
   enabled: boolean;
+  rank: number;
+  creation: string;
 }
 
 export interface Team {
@@ -701,7 +597,36 @@ export interface SavedReply {
   message: string;
   scope: string;
   teams: Team[];
+  /** JSON-encoded SavedReplyAction[] */
+  actions: string;
   owner: string;
+}
+
+export type SavedReplyActionType =
+  | "Set Status"
+  | "Set Priority"
+  | "Set Team"
+  | "Set Ticket Type"
+  | "Assign Agent"
+  | "Assign to Me"
+  | "Add Tag"
+  | "Remove Tag"
+  | "Add Comment";
+
+export interface SavedReplyAction {
+  action_type: SavedReplyActionType;
+  value: string;
+  label?: string;
+  /** Title of the saved reply that staged this action */
+  source?: string;
+  /** Value the saved reply shipped, so an edited comment can be restored */
+  original_value?: string;
+}
+
+export interface RenderedSavedReply {
+  title: string;
+  message: string;
+  actions: SavedReplyAction[];
 }
 
 export type APIOptions = DropdownOption[] | string[] | [];
@@ -739,10 +664,6 @@ export const RecentSimilarTicketsSymbol: InjectionKey<
   ComputedRef<Resource<RecentSimilarTicket>>
 > = Symbol("recentSimilarTickets");
 
-export const ActivitiesSymbol: InjectionKey<
-  ComputedRef<Resource<TicketActivities>>
-> = Symbol("activities");
-
 export const AssignmentRuleListResourceSymbol: InjectionKey<
   Resource<AssignmentRule[]>
 > = Symbol("assignmentRuleListResource");
@@ -765,6 +686,10 @@ export const SavedReplyListResourceSymbol: InjectionKey<
   ListResource<SavedReply>
 > = Symbol("savedReplyListResource");
 
+export const CustomerResourceSymbol: InjectionKey<
+  DocumentResource<HDCustomer>
+> = Symbol("customerResource");
+
 declare global {
   interface Window {
     is_fc_site: boolean;
@@ -773,6 +698,59 @@ declare global {
     session_user: string;
     timezone: Record<"user" | "system", string>;
     agent: string | null;
+    default_country: string;
     apps: string[];
+    cloud_settings?: { enabled: boolean };
   }
+}
+
+export interface CustomerContact {
+  contact_name: string;
+  is_primary: 0 | 1;
+  is_manager: 0 | 1;
+  email_id: string | null;
+  mobile_no: string | null;
+  image: string | null;
+  last_active: string;
+  modified?: string;
+  ticket_count: number;
+}
+export interface NewContactState {
+  firstName: string;
+  lastName: string;
+  image: string;
+  email: string;
+  phone: string;
+  timezone: string;
+  customer: string;
+  invite: boolean;
+}
+
+export interface ContactEmailEntry {
+  email_id: string;
+  isPrimary: boolean;
+  key: number;
+}
+
+export interface ContactPhoneEntry {
+  phone: string;
+  isPrimary: boolean;
+  key: number;
+}
+
+export interface EditContactState {
+  firstName: string;
+  lastName: string;
+  image: string;
+  emails: ContactEmailEntry[];
+  phones: ContactPhoneEntry[];
+  customers: string[];
+  customer: string;
+  timezone: string;
+}
+
+export interface LineChart {
+  percentage_change: number;
+  total: number;
+  data: { date: string; count: number }[];
 }

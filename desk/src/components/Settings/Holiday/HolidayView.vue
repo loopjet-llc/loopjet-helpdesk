@@ -1,18 +1,9 @@
 <template>
-  <SettingsLayoutBase>
-    <template #title>
-      <div class="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          icon-left="chevron-left"
-          :label="holidayData?.holiday_list_name || __('New Business Holiday')"
-          size="md"
-          @click="goBack()"
-          class="cursor-pointer -ml-4 hover:bg-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:none active:bg-transparent active:outline-none active:ring-0 active:ring-offset-0 active:text-ink-gray-5 font-semibold text-ink-gray-7 text-lg hover:opacity-70 !pr-0"
-        />
-        <UnsavedBadge :show="isDirty" />
-      </div>
-    </template>
+  <SettingsLayoutBase
+    :back-label="holidayData?.holiday_list_name || __('New Business Holiday')"
+    :on-back="goBack"
+    :dirty="isDirty"
+  >
     <template #header-actions>
       <Button
         :label="__('Save')"
@@ -68,7 +59,7 @@
         <hr class="my-8" />
         <div>
           <div class="flex flex-col gap-1">
-            <span class="text-lg font-semibold text-ink-gray-8">{{
+            <span class="text-md-semibold text-ink-gray-8">{{
               __("Valid From")
             }}</span>
             <span class="text-p-sm text-ink-gray-6">
@@ -119,7 +110,7 @@
         <hr class="my-8" />
         <div>
           <div class="flex flex-col gap-1">
-            <div class="text-lg font-semibold text-ink-gray-8">
+            <div class="text-md-semibold text-ink-gray-8">
               {{ __("Recurring Holidays") }}
             </div>
             <div class="text-p-sm text-ink-gray-6">
@@ -137,7 +128,7 @@
         <div>
           <div class="flex justify-between items-center">
             <div class="flex justify-between flex-col gap-1">
-              <span class="text-lg font-semibold text-ink-gray-8">
+              <span class="text-md-semibold text-ink-gray-8">
                 {{ __("Holidays") }}
               </span>
               <div class="text-p-sm text-ink-gray-6">
@@ -149,13 +140,15 @@
               </div>
             </div>
             <TabButtons
-              :buttons="[
+              :options="[
                 {
                   value: 'calendar',
+                  label: __('Calendar'),
                   icon: 'lucide-calendar',
                 },
                 {
                   value: 'list',
+                  label: __('List'),
                   icon: 'lucide-list',
                 },
               ]"
@@ -176,13 +169,13 @@
             <!-- Indicators -->
             <div class="flex gap-4" v-if="holidayListView === 'calendar'">
               <div class="gap-1 flex items-center">
-                <span class="bg-yellow-100 size-4 rounded-sm" />
+                <span class="bg-surface-yellow-2 size-4 rounded-1" />
                 <span class="text-sm text-ink-gray-6">{{
                   __("Holidays")
                 }}</span>
               </div>
               <div class="gap-1 flex items-center">
-                <span class="bg-surface-gray-2 size-4 rounded-sm" />
+                <span class="bg-surface-gray-2 size-4 rounded-1" />
                 <span class="text-sm text-ink-gray-6">{{
                   __("Recurring holidays")
                 }}</span>
@@ -238,7 +231,6 @@ import HolidaysCalendarView from "./HolidaysCalendarView.vue";
 import AddHolidayModal from "./Modals/AddHolidayModal.vue";
 import { __ } from "@/translation";
 import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
-import UnsavedBadge from "@/components/UnsavedBadge.vue";
 import { HolidayListResourceSymbol } from "@/types";
 import { HDServiceHolidayList } from "@/types/doctypes";
 

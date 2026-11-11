@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "allow_import": 1,
  "autoname": ".####",
  "creation": "2023-10-17 14:27:11.078679",
@@ -57,8 +58,6 @@
   "email_account",
   "column_break_16",
   "via_customer_portal",
-  "attachment",
-  "content_type",
   "split_and_merge_section",
   "is_merged",
   "merged_with",
@@ -93,7 +92,8 @@
    "label": "Raised By (Email)",
    "oldfieldname": "raised_by",
    "oldfieldtype": "Data",
-   "options": "Email"
+   "options": "Email",
+   "permlevel": 7
   },
   {
    "fieldname": "status",
@@ -104,6 +104,7 @@
    "oldfieldname": "status",
    "oldfieldtype": "Select",
    "options": "HD Ticket Status",
+   "reqd": 1,
    "search_index": 1
   },
   {
@@ -112,7 +113,8 @@
    "in_list_view": 1,
    "label": "Priority",
    "link_filters": "[[\"HD Ticket Priority\",\"disabled\",\"=\",0]]",
-   "options": "HD Ticket Priority"
+   "options": "HD Ticket Priority",
+   "permlevel": 7
   },
   {
    "fieldname": "cb00",
@@ -123,20 +125,23 @@
    "fieldtype": "Link",
    "label": "Ticket Type",
    "link_filters": "[[\"HD Ticket Type\",\"disabled\",\"=\",0]]",
-   "options": "HD Ticket Type"
+   "options": "HD Ticket Type",
+   "permlevel": 7
   },
   {
    "fieldname": "agent_group",
    "fieldtype": "Link",
    "label": "Team",
    "link_filters": "[[\"HD Team\",\"disabled\",\"=\",0]]",
-   "options": "HD Team"
+   "options": "HD Team",
+   "permlevel": 7
   },
   {
    "fieldname": "ticket_split_from",
    "fieldtype": "Link",
    "label": "Ticket Split From",
    "options": "HD Ticket",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -153,7 +158,8 @@
    "in_global_search": 1,
    "label": "Description",
    "oldfieldname": "problem_description",
-   "oldfieldtype": "Text"
+   "oldfieldtype": "Text",
+   "set_only_once": 1
   },
   {
    "fieldname": "template",
@@ -170,13 +176,16 @@
    "fieldname": "sla",
    "fieldtype": "Link",
    "label": "SLA",
-   "options": "HD Service Level Agreement"
+   "options": "HD Service Level Agreement",
+   "permlevel": 7,
+   "search_index": 1
   },
   {
    "depends_on": "eval: doc.status_category != 'Paused' && doc.sla;",
    "fieldname": "response_by",
    "fieldtype": "Datetime",
    "label": "Response By",
+   "permlevel": 7,
    "read_only": 1
   },
   {
@@ -192,6 +201,7 @@
    "fieldtype": "Select",
    "label": "SLA Status",
    "options": "\nFirst Response Due\nResolution Due\nFailed\nFulfilled\nPaused",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -199,6 +209,7 @@
    "fieldname": "resolution_by",
    "fieldtype": "Datetime",
    "label": "Resolution By",
+   "permlevel": 7,
    "read_only": 1
   },
   {
@@ -206,18 +217,21 @@
    "fieldtype": "Datetime",
    "hidden": 1,
    "label": "SLA Creation",
+   "permlevel": 8,
    "read_only": 1
   },
   {
    "fieldname": "on_hold_since",
    "fieldtype": "Datetime",
    "label": "On Hold Since",
+   "permlevel": 7,
    "read_only": 1
   },
   {
    "fieldname": "total_hold_time",
    "fieldtype": "Duration",
    "label": "Total Hold Time",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -230,12 +244,14 @@
    "fieldname": "first_response_time",
    "fieldtype": "Duration",
    "label": "First Response Time",
+   "permlevel": 7,
    "read_only": 1
   },
   {
    "fieldname": "first_responded_on",
    "fieldtype": "Datetime",
    "label": "First Responded On",
+   "permlevel": 7,
    "read_only": 1
   },
   {
@@ -247,6 +263,7 @@
    "fieldname": "avg_response_time",
    "fieldtype": "Duration",
    "label": "Average Response Time",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -261,7 +278,8 @@
    "label": "Resolution Details",
    "no_copy": 1,
    "oldfieldname": "resolution_details",
-   "oldfieldtype": "Text"
+   "oldfieldtype": "Text",
+   "permlevel": 8
   },
   {
    "depends_on": "eval:!doc.__islocal",
@@ -278,6 +296,7 @@
    "no_copy": 1,
    "oldfieldname": "opening_date",
    "oldfieldtype": "Date",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -287,6 +306,7 @@
    "no_copy": 1,
    "oldfieldname": "opening_time",
    "oldfieldtype": "Time",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -297,18 +317,21 @@
    "no_copy": 1,
    "oldfieldname": "resolution_date",
    "oldfieldtype": "Date",
+   "permlevel": 7,
    "read_only": 1
   },
   {
    "fieldname": "resolution_time",
    "fieldtype": "Duration",
    "label": "Resolution Time",
+   "permlevel": 7,
    "read_only": 1
   },
   {
    "fieldname": "user_resolution_time",
    "fieldtype": "Duration",
    "label": "User Resolution Time",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -322,20 +345,23 @@
    "fieldname": "contact",
    "fieldtype": "Link",
    "label": "Contact",
-   "options": "Contact"
+   "options": "Contact",
+   "permlevel": 7
   },
   {
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Customer",
-   "options": "HD Customer"
+   "options": "HD Customer",
+   "permlevel": 7
   },
   {
    "fieldname": "email_account",
    "fieldtype": "Link",
    "label": "Email Account",
-   "options": "Email Account"
+   "options": "Email Account",
+   "permlevel": 8
   },
   {
    "fieldname": "column_break_16",
@@ -345,19 +371,8 @@
    "default": "0",
    "fieldname": "via_customer_portal",
    "fieldtype": "Check",
-   "label": "Via Customer Portal"
-  },
-  {
-   "fieldname": "attachment",
-   "fieldtype": "Attach",
-   "hidden": 1,
-   "label": "Attachment"
-  },
-  {
-   "fieldname": "content_type",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Content Type"
+   "label": "Via Customer Portal",
+   "permlevel": 8
   },
   {
    "fieldname": "customer_feedback_section",
@@ -410,7 +425,8 @@
   {
    "fieldname": "summary",
    "fieldtype": "Text Editor",
-   "label": "Summary"
+   "label": "Summary",
+   "permlevel": 8
   },
   {
    "fieldname": "split_and_merge_section",
@@ -422,6 +438,7 @@
    "fieldname": "is_merged",
    "fieldtype": "Check",
    "label": "Ticket Merged",
+   "permlevel": 8,
    "read_only": 1
   },
   {
@@ -430,12 +447,14 @@
    "fieldtype": "Link",
    "label": "Merged With",
    "options": "HD Ticket",
+   "permlevel": 8,
    "read_only": 1
   },
   {
    "fieldname": "key",
    "fieldtype": "Data",
    "label": "Key",
+   "permlevel": 8,
    "read_only": 1,
    "set_only_once": 1
   },
@@ -444,25 +463,29 @@
    "fieldname": "status_category",
    "fieldtype": "Data",
    "label": "Status Category",
+   "permlevel": 7,
    "read_only": 1
   },
   {
    "fieldname": "last_agent_response",
    "fieldtype": "Datetime",
    "label": "Last Agent Response",
+   "permlevel": 8,
    "read_only": 1
   },
   {
    "fieldname": "last_customer_response",
    "fieldtype": "Datetime",
    "label": "Last Customer Response",
+   "permlevel": 8,
    "read_only": 1
     },
   {
-   "default": "False",
+   "default": "0",
    "fieldname": "raised_outside_working_hours",
    "fieldtype": "Check",
    "label": "Ticket raised outside working hours",
+   "permlevel": 8,
    "read_only": 1,
    "set_only_once": 1
   },
@@ -471,6 +494,7 @@
    "fieldname": "first_response_failed_by",
    "fieldtype": "Duration",
    "label": "First Response Failed By",
+   "permlevel": 7,
    "read_only": 1
   },
   {
@@ -478,6 +502,7 @@
    "fieldname": "resolution_failed_by",
    "fieldtype": "Duration",
    "label": "Resolution Failed By",
+   "permlevel": 7,
    "read_only": 1
   }
  ],
@@ -485,7 +510,7 @@
  "icon": "fa fa-issue",
  "idx": 61,
  "links": [],
- "modified": "2026-05-11 18:25:54.352721",
+ "modified": "2026-09-30 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Helpdesk",
  "name": "HD Ticket",
@@ -506,24 +531,12 @@
   },
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Agent",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "All",
    "share": 1,
    "write": 1
   },
@@ -537,6 +550,68 @@
    "report": 1,
    "role": "Agent Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "HD Customer",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "HD Customer Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 7,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 7,
+   "read": 1,
+   "role": "Agent",
+   "write": 1
+  },
+  {
+   "permlevel": 7,
+   "read": 1,
+   "role": "Agent Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 7,
+   "read": 1,
+   "role": "HD Customer"
+  },
+  {
+   "permlevel": 7,
+   "read": 1,
+   "role": "HD Customer Manager"
+  },
+  {
+   "permlevel": 8,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 8,
+   "read": 1,
+   "role": "Agent",
+   "write": 1
+  },
+  {
+   "permlevel": 8,
+   "read": 1,
+   "role": "Agent Manager",
    "write": 1
   }
  ],

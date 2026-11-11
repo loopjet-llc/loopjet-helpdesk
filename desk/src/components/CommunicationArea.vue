@@ -56,10 +56,15 @@
             :to-emails="toEmails"
             :cc-emails="ccEmails"
             :bcc-emails="bccEmails"
-            @submit="
+            @sending="
               () => {
                 showEmailBox = false;
-                emit('update');
+              }
+            "
+            @submit="() => emit('update')"
+            @restore="
+              () => {
+                showEmailBox = true;
               }
             "
             @discard="
@@ -101,10 +106,15 @@
             :editable="showCommentBox"
             :doctype="doctype"
             :placeholder="__('Interne Notiz für das Loopjet-Team …')"
-            @submit="
+            @sending="
               () => {
                 showCommentBox = false;
-                emit('update');
+              }
+            "
+            @submit="() => emit('update')"
+            @restore="
+              () => {
+                showCommentBox = true;
               }
             "
             @discard="
@@ -155,16 +165,14 @@ function toggleCommentBox() {
   showCommentBox.value = !showCommentBox.value;
 }
 
+// the editors emit `submit` once the write lands; reloading here too would
+// fetch twice, and the guards' `false` never reaches this side anyway
 function submitEmail() {
-  if (emailEditorRef.value.submitMail()) {
-    emit("update");
-  }
+  emailEditorRef.value.submitMail();
 }
 
 function submitComment() {
-  if (commentTextEditorRef.value.submitComment()) {
-    emit("update");
-  }
+  commentTextEditorRef.value.submitComment();
 }
 
 function splitIfString(str: string | string[]) {
@@ -240,39 +248,48 @@ defineExpose({
   editor: emailEditorRef,
 });
 
+const IGNORED_SELECTORS = [
+  ".tippy-box",
+  ".tippy-content",
+  ".PopoverContent",
+  '[role="dialog"]',
+  '[role="presentation"]',
+  '[role="menu"]',
+  ".dialog-overlay",
+  // Grammarly suggestions appear outside the box, allow them to stop collapsing.
+  "grammarly-extension",
+  "grammarly-popups",
+  "[data-grammarly-part]",
+];
+
+// `ignore` is only consulted on pointerdown, which dialogs stop, so the click
+// through has to be checked too. Without this a dialog button closes the box.
+function isIgnored(event: Event): boolean {
+  const target = event.target as HTMLElement | null;
+  return Boolean(target?.closest?.(IGNORED_SELECTORS.join(", ")));
+}
+
 onClickOutside(
   emailBoxRef,
-  () => {
-    if (showEmailBox.value) {
+  (event) => {
+    if (showEmailBox.value && !isIgnored(event)) {
       showEmailBox.value = false;
     }
   },
   {
-    ignore: [
-      ".tippy-box",
-      ".tippy-content",
-      ".PopoverContent",
-      '[role="dialog"]',
-      ".dialog-overlay",
-    ],
+    ignore: IGNORED_SELECTORS,
   }
 );
 
 onClickOutside(
   commentBoxRef,
-  () => {
-    if (showCommentBox.value) {
+  (event) => {
+    if (showCommentBox.value && !isIgnored(event)) {
       showCommentBox.value = false;
     }
   },
   {
-    ignore: [
-      ".tippy-box",
-      ".tippy-content",
-      ".PopoverContent",
-      '[role="dialog"]',
-      ".dialog-overlay",
-    ],
+    ignore: IGNORED_SELECTORS,
   }
 );
 </script>

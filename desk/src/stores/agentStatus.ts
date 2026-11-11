@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/stores/auth";
+import { userStorage } from "@/composables/userStorage";
 import { globalStore } from "@/stores/globalStore";
 import { __ } from "@/translation";
 import { HDAgentStatus } from "@/types/doctypes";
@@ -15,42 +16,68 @@ interface AvailabilityEvent {
   agent: string;
   availability: string;
   availability_changed_on: string;
+  changed_by: string;
 }
 
 // Maps an HD Agent Status `color` value to a solid presence-dot background.
 const dotColorMap: Record<string, string> = {
-  black: "bg-ink-gray-9",
-  gray: "bg-gray-500",
-  blue: "bg-blue-500",
-  green: "bg-green-600",
-  red: "bg-red-500",
-  pink: "bg-pink-500",
-  orange: "bg-orange-500",
-  amber: "bg-amber-500",
-  yellow: "bg-yellow-500",
-  cyan: "bg-cyan-500",
-  teal: "bg-teal-500",
-  violet: "bg-violet-500",
-  purple: "bg-purple-500",
+  black: "bg-surface-gray-9",
+  gray: "bg-surface-gray-6",
+  blue: "bg-surface-blue-6",
+  green: "bg-surface-green-6",
+  red: "bg-surface-red-6",
+  pink: "bg-surface-pink-6",
+  orange: "bg-surface-orange-6",
+  amber: "bg-surface-amber-6",
+  yellow: "bg-surface-yellow-6",
+  cyan: "bg-surface-cyan-6",
+  teal: "bg-surface-teal-6",
+  violet: "bg-surface-violet-6",
+  purple: "bg-surface-purple-6",
 };
 
-const defaultColor = "bg-surface-gray-5";
+const defaultColor = "bg-surface-gray-8";
 
 export const useAgentStatusStore = defineStore("agentStatus", () => {
   // Set only for sessions that have an HD Agent record; null otherwise.
   const myAgentName = window.agent;
 
+  // One status change = one greeting per device. An empty marker means this
+  // device has no baseline yet: record without greeting, so a fresh browser
+  // is not told about changes that predate it.
+  const lastSeenStatusChange = userStorage("hd_status_change_seen", "");
+
+  function noteStatusChange(
+    availability: string,
+    changedOn: string,
+    changedBy: string
+  ) {
+    if (!changedOn || changedOn === lastSeenStatusChange.value) return;
+    const firstVisit = !lastSeenStatusChange.value;
+    lastSeenStatusChange.value = changedOn;
+    if (firstVisit || !changedBy || changedBy === window.session_user) return;
+    // status names are translated in the picker, so translate here too
+    toast.info(__("Your status was changed to {0}.", __(availability)));
+  }
+
   const statuses = createListResource({
     doctype: "HD Agent Status",
     cache: ["HD Agent Status", "list"],
-    fields: ["name", "agent_status", "category", "color", "enable", "status_order"],
+    fields: [
+      "name",
+      "agent_status",
+      "category",
+      "color",
+      "enabled",
+      "status_order",
+    ],
     orderBy: "`tabHD Agent Status`.status_order",
     pageLength: 1000,
     auto: true,
   });
 
   // Live availability keyed by HD Agent name. Seeded by fetches and kept current
-  // over the socket — set_my_availability broadcasts to every client, so this is
+  // over the socket — HD Agent's on_update broadcasts to every client, so this is
   // the single source of truth for "who is what right now", including ourselves.
   const liveStatuses = reactive<Record<string, LiveAvailability>>({});
 
@@ -60,9 +87,16 @@ export const useAgentStatusStore = defineStore("agentStatus", () => {
   }
 
   const { $socket } = globalStore();
-  $socket.on("agent_availability_updated", (data: AvailabilityEvent) =>
-    applyLive(data.agent, data.availability, data.availability_changed_on)
-  );
+  $socket.on("agent_availability_updated", (data: AvailabilityEvent) => {
+    if (data.agent === myAgentName) {
+      noteStatusChange(
+        data.availability,
+        data.availability_changed_on,
+        data.changed_by
+      );
+    }
+    applyLive(data.agent, data.availability, data.availability_changed_on);
+  });
 
   // Seed our own status from the session payload (auth.get_user already resolves
   // the agent), then let the socket and the optimistic write keep it current — no
@@ -75,8 +109,20 @@ export const useAgentStatusStore = defineStore("agentStatus", () => {
     { immediate: true }
   );
 
+  // greet a login that missed the live toast
+  if (myAgentName) {
+    noteStatusChange(
+      auth.availability,
+      auth.availabilityChangedOn,
+      auth.availabilityChangedBy
+    );
+  }
+
+  // A plain document write: HD Agent's controller owns the validation, the
+  // availability_changed_on stamp and the socket broadcast, so every write path
+  // behaves the same and this needs no dedicated endpoint.
   const setMyAvailability = createResource({
-    url: "helpdesk.api.agent.set_my_availability",
+    url: "frappe.client.set_value",
     onSuccess: () => toast.success(__("Status updated successfully.")),
     onError: () => toast.error(__("Could not update status.")),
   });
@@ -89,7 +135,7 @@ export const useAgentStatusStore = defineStore("agentStatus", () => {
   // menu and the dots never disagree and we avoid a second server round-trip.
   const statusOptions = computed<string[]>(() =>
     (statuses.data ?? [])
-      .filter((s: HDAgentStatus) => s.enable)
+      .filter((s: HDAgentStatus) => s.enabled)
       .map((s: HDAgentStatus) => s.agent_status)
   );
 
@@ -101,7 +147,12 @@ export const useAgentStatusStore = defineStore("agentStatus", () => {
     const previous = liveStatuses[myAgentName];
     applyLive(myAgentName, status);
     setMyAvailability.submit(
-      { availability: status },
+      {
+        doctype: "HD Agent",
+        name: myAgentName,
+        fieldname: "availability",
+        value: status,
+      },
       {
         // Roll back the optimistic write on failure.
         onError: () => {
