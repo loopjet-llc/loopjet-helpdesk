@@ -31,13 +31,13 @@
           :disabled="isCustomerPortal"
           ghost-class="opacity-40"
           drag-class="shadow-lg"
-          class="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl bg-surface-gray-2 p-2"
+          class="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-7 bg-surface-gray-2 p-2"
           @change="(event) => handleMove(column.name, event)"
         >
           <template #item="{ element: ticket }">
             <button
               type="button"
-              class="group block w-full rounded-xl border border-outline-gray-1 bg-surface-white p-3.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-outline-gray-3 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-outline-gray-3"
+              class="group block w-full rounded-7 border border-outline-gray-1 bg-surface-base p-3.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-outline-gray-3 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-outline-gray-3"
               @click="emit('open', ticket.name)"
             >
               <div class="mb-2 flex items-center justify-between gap-2">
@@ -46,7 +46,7 @@
                 >
                 <span
                   v-if="ticket.priority"
-                  class="rounded-md px-2 py-1 text-p-xs font-medium"
+                  class="rounded-5 px-2 py-1 text-p-xs font-medium"
                   :class="priorityClass(ticket.priority)"
                 >
                   {{ __(ticket.priority) }}
@@ -73,7 +73,7 @@
 
               <div
                 v-if="ticket.resolution_by || ticket.agreement_status"
-                class="mt-3 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-p-xs"
+                class="mt-3 flex items-center gap-1.5 rounded-6 px-2 py-1.5 text-p-xs"
                 :class="slaClass(ticket.agreement_status)"
               >
                 <LucideClock3 class="size-3.5 shrink-0" />
@@ -189,7 +189,7 @@ function priorityClass(priority: string) {
     return "bg-surface-red-1 text-ink-red-3";
   }
   if (["high", "hoch"].includes(normalized)) {
-    return "bg-surface-orange-1 text-orange-700";
+    return "bg-surface-amber-1 text-ink-amber-3";
   }
   return "bg-surface-gray-2 text-ink-gray-6";
 }

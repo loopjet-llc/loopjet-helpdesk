@@ -1,6 +1,6 @@
 <template>
   <div
-    class="-all flex py-[7px] mx-2 h-7.5 cursor-pointer items-center rounded ps-2 pe-2 text-ink-gray-8 duration-300 ease-in-out"
+    class="-all flex py-[7px] mx-2 h-7.5 cursor-pointer items-center rounded-4 ps-2 pe-2 text-ink-gray-8 duration-300 ease-in-out"
     :class="{
       'w-auto': isExpanded,
       'w-8': !isExpanded,
