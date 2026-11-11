@@ -1,20 +1,10 @@
 <template>
   <SettingsLayoutBase
     :description="__('Configure your Twilio settings for Helpdesk.')"
+    :back-label="__('Twilio')"
+    :on-back="goBack"
+    :dirty="isDirty.twilio"
   >
-    <template #title>
-      <div class="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          icon-left="chevron-left"
-          :label="__('Twilio')"
-          size="md"
-          @click="goBack"
-          class="cursor-pointer hover:bg-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:none active:bg-transparent active:outline-none active:ring-0 active:ring-offset-0 active:text-ink-gray-5 font-semibold text-ink-gray-7 text-lg hover:opacity-70 !pr-0 !pl-0 -ml-1.5"
-        />
-        <UnsavedBadge :show="isDirty.twilio" />
-      </div>
-    </template>
     <template #header-actions>
       <Button
         :label="__('Save')"
@@ -73,25 +63,26 @@
               v-model="twilio.doc.api_secret"
               disabled
             />
-            <Autocomplete
+            <Combobox
               v-if="twilio.originalDoc?.account_sid && twilioApps.length > 0"
+              trigger="button"
               label="TwiML App Name"
               :model-value="twilio.doc.app_name"
-              @update:modelValue="twilio.doc.app_name = $event.value"
               :options="twilioApps"
+              @update:model-value="twilio.doc.app_name = $event"
             >
-              <template #footer="{ togglePopover }">
+              <template #footer="{ setOpen }">
                 <Button
                   :label="__('Refresh Apps')"
                   theme="gray"
                   variant="subtle"
                   class="w-full"
                   icon-left="lucide-refresh-cw"
-                  @click="refreshApps(togglePopover)"
                   :loading="twilioAppsResource.loading"
+                  @click="refreshApps(setOpen)"
                 />
               </template>
-            </Autocomplete>
+            </Combobox>
             <FormControl
               v-if="twilio.doc.twiml_sid"
               label="TwiML App SID"
@@ -126,18 +117,17 @@
 <script setup>
 import Password from "@/components/Password.vue";
 import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
-import UnsavedBadge from "@/components/UnsavedBadge.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import {
   Button,
   Checkbox,
+  Combobox,
   FormControl,
   createDocumentResource,
   toast,
   ErrorMessage,
   createResource,
   Badge,
-  Autocomplete,
 } from "frappe-ui";
 import { nextTick, ref, watch } from "vue";
 import { isDocDirty, validateExotel, validateTwilio } from "./utils";
@@ -249,13 +239,11 @@ async function save() {
   telephonyStore.fetchCallIntegrationStatus();
 }
 
-function refreshApps(togglePopover) {
+function refreshApps(setOpen) {
   twilioAppsResource.submit().then(() => {
     // Close and reopen popover to fix bug where search does not work after refreshing list
-    togglePopover();
-    nextTick(() => {
-      togglePopover();
-    });
+    setOpen(false);
+    nextTick(() => setOpen(true));
   });
 }
 

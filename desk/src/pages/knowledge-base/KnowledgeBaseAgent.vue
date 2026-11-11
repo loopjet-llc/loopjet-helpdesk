@@ -2,13 +2,17 @@
   <div class="flex flex-col">
     <LayoutHeader>
       <template #left-header>
-        <div class="text-lg font-medium text-ink-gray-9">
+        <div class="text-lg-medium text-ink-gray-9">
           {{ __("Knowledge Base") }}
         </div>
       </template>
       <template #right-header>
         <Dropdown :options="headerOptions">
-          <Button :label="__('Create')" variant="solid">
+          <Button
+            :label="__('Create')"
+            variant="solid"
+            class="rtl:flex-row-reverse"
+          >
             <template #prefix>
               <LucidePlus class="h-4 w-4" />
             </template>
@@ -39,6 +43,7 @@
 </template>
 
 <script setup lang="ts">
+import Icon from "@/components/Icon.vue";
 import LayoutHeader from "@/components/LayoutHeader.vue";
 import ListViewBuilder from "@/components/ListViewBuilder.vue";
 import CategoryModal from "@/components/knowledge-base/CategoryModal.vue";
@@ -60,7 +65,6 @@ import {
   Badge,
   Button,
   Dropdown,
-  FeatherIcon,
   createResource,
   toast,
   usePageMeta,
@@ -203,7 +207,7 @@ const selectBannerActions = [
           {
             label: __("Delete"),
             theme: "red",
-            iconLeft: "trash-2",
+            iconLeft: "lucide-trash-2",
             variant: "solid",
             onClick({ close }) {
               handleDeleteArticles();
@@ -322,7 +326,7 @@ function handleCategoryDelete(groupedRow) {
       {
         label: __("Confirm"),
         variant: "solid",
-        onClick(close: Function) {
+        onClick({ close }: { close: () => void }) {
           deleteCategory.submit(
             {
               doctype: "HD Article Category",
@@ -398,8 +402,8 @@ const options = computed(() => {
     columnConfig: {
       title: {
         prefix: () => {
-          return h(FeatherIcon, {
-            name: "file-text",
+          return h(Icon, {
+            icon: "lucide-file-text",
             class: "h-4 w-4 flex-shrink-0 text-ink-gray-6",
           });
         },
@@ -441,7 +445,7 @@ const statusMap = {
   },
   Draft: {
     label: __("Draft"),
-    theme: "orange",
+    theme: "amber",
   },
   Archived: {
     label: __("Archived"),

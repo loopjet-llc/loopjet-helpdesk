@@ -8,9 +8,9 @@
     v-if="showViewControls"
   >
     <QuickFilters v-if="!isMobileView" />
-    <div v-if="!isMobileView" class="-ml-2 h-5 border-l"></div>
+    <div v-if="!isMobileView" class="-ms-2 h-5 border-s"></div>
     <div
-      class="flex items-start gap-2 justify-end h-full py-1 pl-0.5"
+      class="flex items-start gap-2 justify-end h-full py-1 ps-0.5"
       v-if="!isMobileView"
     >
       <Button
@@ -19,7 +19,7 @@
         @click="handleViewUpdate"
       />
       <Reload @click="handleReload" :loading="list.loading" />
-      <Filter :default_filters="defaultParams.filters" />
+      <Filter />
       <SortBy :hide-label="isMobileView" />
       <ColumnSettings
         :hide-label="isMobileView"
@@ -27,7 +27,7 @@
       />
     </div>
     <div v-else class="flex justify-between items-center w-full">
-      <Filter :default_filters="defaultParams.filters" />
+      <Filter />
       <div class="flex items-center gap-2">
         <Reload @click="handleReload" :loading="list.loading" />
         <SortBy :hide-label="isMobileView" />
@@ -40,7 +40,7 @@
     v-if="list.loading && !list.data?.data?.length"
     class="flex items-center justify-center h-full w-full absolute top-0 z-100"
   >
-    <LoadingIndicator :scale="8" />
+    <LoadingIndicator class="size-6 text-ink-gray-4" />
   </div>
   <!-- Kanban View -->
   <TicketKanban
@@ -94,9 +94,19 @@
     </ListRows>
     <ListSelectBanner v-if="options.showSelectBanner">
       <template #actions="{ selections, unselectAll }">
-        <Dropdown :options="selectBannerOptions(selections, unselectAll)">
-          <Button icon="lucide-more-horizontal" variant="ghost" />
-        </Dropdown>
+        <div class="flex items-center gap-1">
+          <Button
+            v-for="action in selectBannerOptions(selections, unselectAll, true)"
+            :key="action.label"
+            :label="action.label"
+            :icon-left="action.icon"
+            variant="ghost"
+            @click="action.onClick"
+          />
+          <Dropdown :options="selectBannerOptions(selections, unselectAll)">
+            <Button icon="lucide-more-horizontal" variant="ghost" />
+          </Dropdown>
+        </div>
       </template>
     </ListSelectBanner>
   </ListView>
@@ -119,7 +129,17 @@
           handlePageLength(count);
         }
       "
-    />
+    >
+      <!-- frappe-ui's ListFooter still feeds TabButtons the removed `buttons`
+           prop, so its own page-length picker renders nothing. -->
+      <template #left>
+        <TabButtons
+          :model-value="defaultParams.page_length_count"
+          :options="[20, 50, 100].map((o) => ({ label: String(o), value: o }))"
+          @update:model-value="(count) => handlePageLength(count)"
+        />
+      </template>
+    </ListFooter>
   </div>
   <!-- Empty State -->
   <EmptyState
@@ -134,11 +154,11 @@
 import { MultipleAvatar, StarRating } from "@/components";
 import {
   ColumnSettings,
-  Filter,
   QuickFilters,
   Reload,
   SortBy,
 } from "@/components/view-controls";
+import { Filter, normalizeFilters } from "@/components/view-controls/filter";
 import { useScreenSize } from "@/composables/screen";
 import {
   currentView as headerView,
@@ -149,29 +169,33 @@ import { useAuthStore } from "@/stores/auth";
 import { globalStore } from "@/stores/globalStore";
 import { capture } from "@/telemetry";
 import { View, ViewType } from "@/types";
-import { formatTimeShort, getIcon } from "@/utils";
+import { getIcon } from "@/utils";
 import { useStorage } from "@vueuse/core";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
 import {
   createResource,
+  dayjsLocal,
   Dropdown,
-  FeatherIcon,
   frappeRequest,
+  LoadingIndicator,
+  TabButtons,
+  toast,
+} from "frappe-ui";
+import {
+  Icon as SpriteIcon,
   ListFooter,
   ListHeader,
   ListHeaderItem,
   ListRowItem,
   ListSelectBanner,
   ListView,
-  LoadingIndicator,
-  dayjs,
-  toast,
-} from "frappe-ui";
+} from "frappe-ui/experimental";
 import {
   computed,
   h,
   onMounted,
+  onUnmounted,
   provide,
   reactive,
   ref,
@@ -181,6 +205,7 @@ import {
 import { useRoute, useRouter } from "vue-router";
 
 import EmptyState from "./EmptyState.vue";
+import { listFilters } from "./listViewFilters";
 import ListRows from "./ListRows.vue";
 import TicketKanban from "./ticket/TicketKanban.vue";
 
@@ -254,7 +279,7 @@ const defaultOptions = reactive({
               label: __("Delete"),
               variant: "solid",
               theme: "red",
-              iconLeft: "trash-2",
+              iconLeft: "lucide-trash-2",
               onClick({ close }) {
                 handleBulkDelete(close, selections);
               },
@@ -403,7 +428,12 @@ const exposeFunctions = {
   unselectAll: () => {},
 };
 
-function selectBannerOptions(selections: Set<string>, unselectAll = () => {}) {
+/** Banner actions. `inline` picks the ones shown as buttons; the rest fill the "..." menu. */
+function selectBannerOptions(
+  selections: Set<string>,
+  unselectAll = () => {},
+  inline = false
+) {
   exposeFunctions["unselectAll"] = unselectAll;
 
   // Get the user-provided actions
@@ -426,8 +456,10 @@ function selectBannerOptions(selections: Set<string>, unselectAll = () => {}) {
       onClick: () => action.onClick?.(selections),
     }));
 
-  // Return combined actions
-  return [...userActions, ...defaultActions];
+  return [...userActions, ...defaultActions].filter(
+    (action) =>
+      Boolean(action.inline) === inline && (action.condition?.() ?? true)
+  );
 }
 
 const rows = computed(() => {
@@ -457,7 +489,7 @@ function getGroupedByRows(listRows, groupByField) {
       group: option || " ",
       collapsed: false,
       rows: filteredRows,
-      icon: h(FeatherIcon, {
+      icon: h(SpriteIcon, {
         name: "folder",
         class: "h-4 w-4 flex-shrink-0 text-ink-gray-6",
       }),
@@ -540,8 +572,8 @@ function listCell(column: any, row: any, item: any, idx: number) {
   }
   if (column.type === "Datetime") {
     return h("span", {
-      class: "text-p-xs",
-      textContent: formatTimeShort(item),
+      class: "text-base",
+      textContent: dayjsLocal(item).fromNow(),
     });
   }
   if (column.type === "MultipleAvatar") {
@@ -580,22 +612,22 @@ function handleFieldClick(e: MouseEvent, column, row, item) {
   }
 
   if (column.type === "MultipleAvatar") {
-    if (item.length > 1) {
-      let target = e.target as HTMLElement;
-      target = target.closest(".user-avatar");
-      if (target) {
-        item = target.getAttribute("data-name");
-      }
-    } else {
-      item = item[0].name;
-    }
-    applyFilters({
-      ...defaultParams.filters,
-      [column.key]: ["LIKE", `%${item}%`],
-    });
+    const avatar = (e.target as HTMLElement).closest(".user-avatar");
+    // the gap between the faces, and the "+n" chip, name nobody to filter by
+    const name = avatar?.getAttribute("data-name");
+    if (!name) return;
+    applyColumnFilter(column.key, "LIKE", `%${name}%`);
     return;
   }
-  applyFilters({ ...defaultParams.filters, [column.key]: item });
+  applyColumnFilter(column.key, "=", item);
+}
+
+function applyColumnFilter(key: string, operator: string, value: any) {
+  const conditions = normalizeFilters(defaultParams.filters).filter(
+    (condition) => condition[0] !== key
+  );
+  conditions.push([key, operator, value]);
+  applyFilters(conditions);
 }
 
 const showViewControls = computed(() => {
@@ -623,9 +655,17 @@ provide("listViewActions", {
   reload,
 });
 
+// Also published module-scope, for the command palette: it renders in the
+// sidebar, outside this provide chain.
+listFilters.value = {
+  current: () => normalizeFilters(list?.params?.filters),
+  apply: applyFilters,
+};
+onUnmounted(() => (listFilters.value = null));
+
 function applyFilters(filters) {
   isViewUpdated.value = true;
-  defaultParams.filters = { ...filters };
+  defaultParams.filters = normalizeFilters(filters);
   list.submit({ ...defaultParams });
 
   // automatically update filters for default view
@@ -657,7 +697,7 @@ function updateColumns(obj) {
 
 function reload(reset: boolean = false) {
   if (reset) {
-    defaultParams.filters = options.value.defaultFilters || {};
+    defaultParams.filters = normalizeFilters(options.value.defaultFilters);
     defaultParams.order_by = "modified desc";
     defaultParams.page_length = options.value.default_page_length;
     pageLengthCount.value = options.value.default_page_length;
@@ -750,32 +790,66 @@ function handleReload() {
 }
 
 function handleViewChanges() {
-  let currentView: View = findCurrentView();
-  if (!currentView) {
-    router.push({ name: route.name });
-    reload(true);
+  if (!switchToView(route.query.view as string)) return;
+  applyUrlFilters();
+  list.submit({ ...defaultParams });
+}
+
+/** Base for URL filters, so repeated pushes layer on the view, not each other. */
+let viewFilters = [];
+
+/** Owns sort, columns and rows. False means a redirect is in flight. */
+function switchToView(view: string): boolean {
+  defaultParams.view.name = view;
+  const currentView: View = findCurrentView();
+  if (currentView) {
+    // normalize so legacy dict-format saved views become list conditions
+    viewFilters = normalizeFilters(currentView.filters);
+    defaultParams.order_by = currentView.order_by || "modified desc";
+    defaultParams.columns = currentView.columns;
+    defaultParams.rows = currentView.rows;
+    return true;
+  }
+  if (view) {
+    // Stale ?view: drop it but keep the filters, unlike a push to the bare route.
+    router.replace({
+      name: route.name,
+      query: { ...route.query, view: undefined },
+    });
+    return false;
+  }
+  viewFilters = normalizeFilters(options.value.defaultFilters);
+  defaultParams.order_by = "modified desc";
+  defaultParams.columns = [];
+  defaultParams.rows = [];
+  defaultParams.is_default = true;
+  headerView.value.label = __("List");
+  headerView.value.icon = LucideAlignJustify;
+  return true;
+}
+
+/** Touches `filters` only, so filtering never resets the user's sort. */
+function applyUrlFilters() {
+  const urlFilters = parseUrlFilters();
+  if (!urlFilters) {
+    defaultParams.filters = viewFilters;
     return;
   }
-  defaultParams.filters = currentView.filters;
-  defaultParams.order_by = currentView.order_by || "modified desc";
-  defaultParams.columns = currentView.columns;
-  defaultParams.rows = currentView.rows;
+  const overriddenFields = new Set(urlFilters.map((c) => c[0]));
+  defaultParams.filters = urlFilters.length
+    ? [...viewFilters.filter((c) => !overriddenFields.has(c[0])), ...urlFilters]
+    : [];
+}
 
-  if (route.query.filters) {
-    try {
-      const parsedFilters = JSON.parse(route.query.filters as string);
-      if (Object.keys(parsedFilters).length > 0) {
-        defaultParams.filters = {
-          ...defaultParams.filters,
-          ...parsedFilters,
-        };
-      }
-    } catch (e) {
-      console.error("Failed to parse filters from URL", e);
-    }
+/** null when the URL carries no filters; [] means "clear them". */
+function parseUrlFilters() {
+  if (!route.query.filters) return null;
+  try {
+    return normalizeFilters(JSON.parse(route.query.filters as string));
+  } catch (e) {
+    console.error("Failed to parse filters from URL", e);
+    return null;
   }
-
-  list.submit({ ...defaultParams });
 }
 
 function findCurrentView() {
@@ -790,15 +864,14 @@ function findCurrentView() {
   return currentView;
 }
 
+// The view is re-read only when it changes; re-reading it on every filter
+// change is what let a filter silently reset the sort.
 watch(
-  () => route.query.view,
-  (val: string) => {
-    defaultParams.view.name = val;
-    handleViewChanges();
-    if (!val) {
-      headerView.value.label = __("List");
-      headerView.value.icon = LucideAlignJustify;
-    }
+  [() => route.query.view as string, () => route.query.filters as string],
+  ([view], [previousView]) => {
+    if (view !== previousView && !switchToView(view)) return;
+    applyUrlFilters();
+    list.submit({ ...defaultParams });
   }
 );
 
@@ -817,7 +890,10 @@ function handleScrollPosition() {
   }, 200);
 }
 
-function handleColumnResize() {
+function handleColumnResize({ key, width, save } = {}) {
+  const column = columns.value.find((c) => c.key === key);
+  if (column) column.width = width;
+  if (!save) return;
   isViewUpdated.value = true;
   defaultParams.columns = columns.value;
   if (!defaultParams.is_default) return;

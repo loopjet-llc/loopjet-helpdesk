@@ -1,28 +1,21 @@
 <template>
-  <SettingsLayoutBase>
-    <template #title>
-      <div class="flex items-center justify-between w-full">
-        <div class="flex items-center gap-1 justify-center -ml-[16px]">
-          <Button
-            variant="ghost"
-            icon-left="chevron-left"
-            :label="teamName"
-            size="md"
-            @click="() => emit('update:step', 'team-list')"
-            class="cursor-pointer hover:bg-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:none active:bg-transparent active:outline-none active:ring-0 active:ring-offset-0 active:text-ink-gray-5 font-semibold text-ink-gray-7 text-lg hover:opacity-70 !pr-0"
-          />
-        </div>
-      </div>
-    </template>
+  <SettingsLayoutBase
+    :back-label="teamName"
+    :on-back="() => emit('update:step', 'team-list')"
+  >
     <template #header-actions>
       <div class="flex items-center gap-4">
         <div class="flex items-center justify-between gap-2 cursor-pointer">
           <Switch v-model="teamEnabled" v-if="!team.loading" />
-          <span class="text-sm text-ink-gray-7 font-medium">
+          <span class="text-sm-medium text-ink-gray-7">
             {{ __("Enabled") }}
           </span>
         </div>
-        <Dropdown placement="right" :options="options">
+        <Dropdown
+          align="end"
+          :options="options"
+          @update:open="(open) => open && (isConfirmingTeamDelete = false)"
+        >
           <Button variant="ghost">
             <template #icon>
               <LucideMoreHorizontal class="h-4 w-4" />
@@ -70,19 +63,18 @@
         <hr class="mt-2" />
         <div v-for="(member, idx) in teamMembers" :key="member.name">
           <div class="grid grid-cols-8 items-center gap-4 group">
-            <div class="w-full p-2 pl-0 col-span-8">
+            <div class="w-full p-2 ps-0 col-span-8">
               <AgentCard :agent="member" class="!py-0">
                 <template #right>
                   <Dropdown
                     v-if="teamMembers.length > 1"
                     :options="memberDropdownOptions(member)"
-                    placement="right"
+                    align="end"
+                    @update:open="
+                      (open) => open && (isConfirmingDelete = false)
+                    "
                   >
-                    <Button
-                      icon="lucide-more-horizontal"
-                      variant="ghost"
-                      @click="isConfirmingDelete = false"
-                    />
+                    <Button icon="lucide-more-horizontal" variant="ghost" />
                   </Dropdown>
                 </template>
               </AgentCard>
@@ -101,7 +93,7 @@
           <UserIcon class="size-6 text-ink-gray-6" />
         </div>
         <div class="flex flex-col items-center gap-1">
-          <div class="text-base font-medium text-ink-gray-6">
+          <div class="text-base-medium text-ink-gray-6">
             {{ __("No members found") }}
           </div>
           <div class="text-p-sm text-ink-gray-5 max-w-60 text-center">

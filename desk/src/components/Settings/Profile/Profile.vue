@@ -23,36 +23,38 @@
                 />
                 <div
                   v-if="agentStatusStore.myStatus"
-                  class="absolute bottom-0.5 right-0.5 size-3.5 rounded-full outline outline-white outline-4"
-                  :class="
-                    agentStatusStore.statusColor(agentStatusStore.myStatus)
-                  "
-                />
-                <Tooltip
-                  :hoverDelay="0"
-                  placement="bottom"
-                  :text="profileTooltipText"
+                  class="absolute -bottom-0.5 end-0 rounded-full bg-surface-elevation-2 p-1"
                 >
+                  <div
+                    class="size-3.5 rounded-full"
+                    :class="
+                      agentStatusStore.statusColor(agentStatusStore.myStatus)
+                    "
+                  />
+                </div>
+                <!-- one Tooltip each: it wires only its first child -->
+                <Tooltip :hoverDelay="0" side="bottom" :text="uploadTooltip">
                   <div
                     class="z-1 absolute top-0 left-0 flex h-9 cursor-pointer items-center justify-center rounded-full !size-16"
                     @click.stop="openFileSelector"
                   />
+                </Tooltip>
+                <Tooltip
+                  v-if="user.doc?.user_image"
+                  :hoverDelay="0"
+                  side="bottom"
+                  :text="__('Remove Photo')"
+                >
                   <div
-                    v-if="user.doc?.user_image"
-                    class="z-1 size-4 absolute -top-1 -right-1 flex cursor-pointer items-center justify-center rounded-full bg-surface-white opacity-0 duration-300 ease-in-out group-hover:opacity-100 hover:bg-surface-gray-2 outline outline-black-overlay-50"
+                    class="z-1 size-4 absolute -top-1 -right-1 flex cursor-pointer items-center justify-center rounded-full bg-surface-base opacity-0 duration-300 ease-in-out group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-surface-gray-2 outline outline-black-overlay-50"
                     @click.stop="updateImage()"
-                    @mouseenter="isHoveringRemove = true"
-                    @mouseleave="isHoveringRemove = false"
                   >
-                    <FeatherIcon
-                      name="x"
-                      class="size-3.5 cursor-pointer text-ink-gray-4"
-                    />
+                    <LucideX class="size-3.5 cursor-pointer text-ink-gray-4" />
                   </div>
                 </Tooltip>
                 <div
                   v-if="uploading"
-                  class="w-full h-full top-0 left-0 absolute bg-surface-gray-7 bg-opacity-20 rounded-full flex items-center justify-center"
+                  class="w-full h-full top-0 left-0 absolute bg-surface-gray-10 bg-opacity-20 rounded-full flex items-center justify-center"
                 >
                   <LoadingIndicator class="size-4" />
                 </div>
@@ -62,7 +64,32 @@
                   <span class="text-lg font-semibold text-ink-gray-9 truncate">
                     {{ user?.doc?.full_name }}
                   </span>
+                  <Button
+                    class="!px-1 !h-5 flex-shrink-0"
+                    variant="ghost"
+                    @click="editFullName"
+                  >
+                    <EditIcon class="size-3.5" />
+                  </Button>
                 </div>
+                <div v-else class="flex items-center gap-1">
+                  <TextInput
+                    ref="fullNameRef"
+                    v-model="fullName"
+                    @keydown.enter="isNameDirty ? save() : (editName = false)"
+                    @keydown.esc.stop="editName = false"
+                  />
+                  <Button
+                    variant="outline"
+                    icon="lucide-check"
+                    :loading="user?.save?.loading"
+                    :disabled="user?.save?.loading"
+                    @click="isNameDirty ? save() : (editName = false)"
+                  />
+                </div>
+                <span class="text-p-sm text-ink-gray-6 truncate">
+                  {{ user?.doc?.email }}
+                </span>
               </div>
             </div>
           </template>
@@ -71,7 +98,7 @@
       <div>
         <div class="flex items-center justify-between h-7">
           <div class="flex gap-2 items-center">
-            <span class="text-base font-semibold text-ink-gray-9">
+            <span class="text-base-semibold text-ink-gray-9">
               {{ __("Account Info & Security") }}
             </span>
           </div>
@@ -80,7 +107,7 @@
 
       <div v-if="hasAgentRecord" class="flex items-center justify-between mt-6">
         <div class="flex flex-col gap-1">
-          <span class="text-base font-medium text-ink-gray-8">
+          <span class="text-base-medium text-ink-gray-8">
             {{ __("Availability") }}
           </span>
           <span class="text-p-sm text-ink-gray-6">
@@ -95,7 +122,7 @@
       </div>
       <div class="flex items-center justify-between mt-6">
         <div class="flex flex-col gap-1">
-          <span class="text-base font-medium text-ink-gray-8">
+          <span class="text-base-medium text-ink-gray-8">
             {{ __("Emails & Signature") }}
           </span>
           <span class="text-p-sm text-ink-gray-6">
@@ -113,7 +140,7 @@
       </div>
       <div class="flex items-center justify-between mt-6">
         <div class="flex flex-col gap-1">
-          <span class="text-base font-medium text-ink-gray-8">
+          <span class="text-base-medium text-ink-gray-8">
             {{ __("Password") }}
           </span>
           <span class="text-p-sm text-ink-gray-6">{{
@@ -135,40 +162,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, useTemplateRef } from "vue";
+import LucideX from "~icons/lucide/x";
 import {
   Avatar,
   Button,
+  createDocumentResource,
   FileUploader,
   LoadingIndicator,
   toast,
-  createDocumentResource,
 } from "frappe-ui";
+import { computed, nextTick, ref, useTemplateRef } from "vue";
 
-import { __ } from "@/translation";
 import { useAuthStore } from "@/stores/auth";
+import { __ } from "@/translation";
 import EditIcon from "~icons/lucide/edit";
 const emit = defineEmits(["updateStep"]);
 
 import AvailabilityMenu from "@/components/AvailabilityMenu.vue";
+import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
 import { useAvailability } from "@/composables/useAvailability";
 import { useAgentStatusStore } from "@/stores/agentStatus";
 import ChangePasswordModal from "./components/ChangePasswordModal.vue";
 
 const agentStatusStore = useAgentStatusStore();
-import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
 const showChangePasswordModal = ref(false);
 
 const { userId, hasAgentRecord } = useAuthStore();
 const user = createDocumentResource({ doctype: "User", name: userId });
 
-const isHoveringRemove = ref(false);
 const editName = ref(false);
 
-const profileTooltipText = computed(() => {
-  if (isHoveringRemove.value) return __("Remove Photo");
-  return user.doc?.user_image ? __("Change Photo") : __("Upload Photo");
-});
+const uploadTooltip = computed(() =>
+  user.doc?.user_image ? __("Change Photo") : __("Upload Photo")
+);
 
 const fullNameRef = useTemplateRef("fullNameRef");
 const fullName = computed({
@@ -183,7 +209,7 @@ const fullName = computed({
 
 function editFullName() {
   editName.value = true;
-  nextTick(() => fullNameRef.value?.el?.focus());
+  nextTick(() => fullNameRef.value?.focus());
 }
 
 const isNameDirty = computed(() => {
@@ -206,7 +232,6 @@ function save() {
 }
 
 function updateImage(fileUrl = "") {
-  isHoveringRemove.value = false;
   user.doc.user_image = fileUrl;
   save();
 }

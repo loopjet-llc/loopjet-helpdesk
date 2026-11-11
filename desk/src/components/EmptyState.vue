@@ -9,7 +9,7 @@
       <component v-if="icon" :is="icon" class="size-6 text-ink-gray-6" />
     </div>
     <div class="flex flex-col items-center gap-1">
-      <div class="text-base font-medium text-ink-gray-6">
+      <div class="text-base-medium text-ink-gray-6">
         {{ __(title) }}
       </div>
       <div
@@ -19,13 +19,26 @@
         {{ __(descriptionText) }}
       </div>
     </div>
+    <div
+      v-if="actions?.length || documentationLink"
+      class="flex flex-wrap items-center justify-center gap-2 pointer-events-auto"
+    >
+      <Button v-for="action in actions" :key="action.label" v-bind="action" />
+      <Button
+        v-if="documentationLink"
+        variant="outline"
+        icon-left="lucide-external-link"
+        :label="__('Documentation')"
+        :href="documentationLink"
+      />
+    </div>
   </div>
   <div
     v-else
     class="flex h-full items-center justify-center absolute inset-x-0 top-0 pointer-events-none"
   >
     <div
-      class="flex flex-col items-center gap-2 text-xl font-medium text-ink-gray-4 w-9/12 md:w-4/12"
+      class="flex flex-col items-center gap-2 text-xl-medium text-ink-gray-4 w-9/12 md:w-4/12"
     >
       <!-- overlay variant (for charts) -->
       <div
@@ -33,7 +46,7 @@
         class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none -z-10"
         :style="{
           backgroundImage:
-            'radial-gradient(ellipse at center, var(--surface-white) 10%, color-mix(in srgb, var(--surface-white) 90%, transparent) 25%, transparent 70%)',
+            'radial-gradient(ellipse at center, var(--surface-base) 10%, color-mix(in srgb, var(--surface-base) 90%, transparent) 25%, transparent 70%)',
         }"
       />
       <!-- Icon -->
@@ -44,7 +57,7 @@
           :class="{
             'text-sm font-medium text-ink-gray-8': text === 'sm',
             'text-base font-medium text-ink-gray-8': text === 'md' || !text,
-            'text-lg font-medium text-ink-gray-8': text === 'lg',
+            'text-md font-medium text-ink-gray-8': text === 'lg',
           }"
         >
           {{ __(title) }}
@@ -52,24 +65,41 @@
         <span
           v-if="descriptionText"
           :class="{
-            'text-center text-xs text-ink-gray-6 mt-1': text === 'sm',
-            'text-center text-sm text-ink-gray-6 mt-1': text === 'md' || !text,
-            'text-center text-base text-ink-gray-6 mt-1': text === 'lg',
+            'text-center text-p-xs text-ink-gray-6 mt-1': text === 'sm',
+            'text-center text-p-sm text-ink-gray-6 mt-1':
+              text === 'md' || !text,
+            'text-center text-p-base text-ink-gray-6 mt-1': text === 'lg',
           }"
         >
           {{ __(descriptionText) }}
         </span>
+      </div>
+      <div
+        v-if="actions?.length || documentationLink"
+        class="mt-2 flex flex-wrap items-center justify-center gap-2 pointer-events-auto"
+      >
+        <Button v-for="action in actions" :key="action.label" v-bind="action" />
+        <Button
+          v-if="documentationLink"
+          variant="outline"
+          icon-left="lucide-external-link"
+          :label="__('Documentation')"
+          :href="documentationLink"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Button, type ButtonProps } from "frappe-ui";
 import { VNode, computed } from "vue";
 interface Props {
   title: string;
   icon?: VNode | string;
   description?: string;
+  actions?: (ButtonProps & { onClick?: () => void })[];
+  documentationLink?: string;
   variant?: "default" | "overlay" | "badge";
   text?: "sm" | "md" | "lg";
 }

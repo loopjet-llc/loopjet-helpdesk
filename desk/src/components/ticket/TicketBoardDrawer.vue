@@ -189,10 +189,10 @@
 <script setup lang="ts">
 import TicketActivityPanel from "@/components/ticket-agent/TicketActivityPanel.vue";
 import AssignTo from "@/components/ticket-agent/AssignTo.vue";
-import { useTicket } from "@/composables/useTicket";
+import { reloadTicketFeed, useTicket } from "@/composables/useTicket";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
-import { ActivitiesSymbol, AssigneeSymbol, TicketSymbol } from "@/types";
+import { AssigneeSymbol, TicketSymbol } from "@/types";
 import { isContentEmpty, uploadFunction } from "@/utils";
 import { useStorage } from "@vueuse/core";
 import {
@@ -226,10 +226,8 @@ const agentTicketComposable = props.isCustomerPortal
   : useTicket(props.ticketId);
 const agentTicket = computed(() => agentTicketComposable?.ticket);
 const agentAssignees = computed(() => agentTicketComposable?.assignees);
-const agentActivities = computed(() => agentTicketComposable?.activities);
 provide(TicketSymbol, agentTicket as any);
 provide(AssigneeSymbol, agentAssignees as any);
-provide(ActivitiesSymbol, agentActivities as any);
 
 const priorities = createListResource({
   doctype: "HD Ticket Priority",
@@ -356,7 +354,7 @@ function updateAgentField(field: string, value: string) {
     { [field]: value },
     {
       onSuccess: () => {
-        agentActivities.value?.reload();
+        reloadTicketFeed(props.ticketId);
         emit("updated");
       },
     }
@@ -365,7 +363,7 @@ function updateAgentField(field: string, value: string) {
 
 function handleAssigneesUpdated() {
   agentTicket.value?.reload();
-  agentActivities.value?.reload();
+  reloadTicketFeed(props.ticketId);
   emit("updated");
 }
 
