@@ -86,7 +86,7 @@
       >
         <div class="overflow-hidden">
           <div
-            class="mx-5 mt-3 flex items-center gap-2 rounded-lg bg-surface-amber-2 px-3 py-2 text-p-xs text-ink-amber-3"
+            class="mx-5 mt-3 flex items-center gap-2 rounded-6 bg-surface-amber-2 px-3 py-2 text-p-xs text-ink-amber-3"
           >
             <LucideLockKeyhole class="size-4 shrink-0" />
             {{

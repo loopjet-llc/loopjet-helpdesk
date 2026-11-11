@@ -29,13 +29,13 @@
                   <ul class="list-disc ps-4 mt-1 space-y-1">
                     <li>
                       {{ __("Ticket must be Open or Paused.") }}
-                      <code class="bg-surface-gray-2 rounded-md px-1 py-0.5">
+                      <code class="bg-surface-gray-2 rounded-5 px-1 py-0.5">
                         {{ __("status_category in ['Open', 'Paused']") }}</code
                       >
                     </li>
                     <li>
                       {{ __("Ticket must not already be merged.") }}
-                      <code class="bg-surface-gray-2 rounded-md px-1 py-0.5">
+                      <code class="bg-surface-gray-2 rounded-5 px-1 py-0.5">
                         {{ __("is_merged === 0") }}</code
                       >
                     </li>

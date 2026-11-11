@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div class="fixed inset-0 z-40 bg-black/15" @click="emit('close')" />
     <aside
-      class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-outline-gray-2 bg-surface-white shadow-2xl"
+      class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-outline-gray-2 bg-surface-base shadow-2xl"
       :style="drawerStyle"
       role="dialog"
       aria-modal="true"
@@ -58,7 +58,15 @@
               <LucideMaximize2 v-else class="size-4" />
             </template>
           </Button>
-          <Button icon="x" variant="ghost" @click="emit('close')" />
+          <Button
+            variant="ghost"
+            :aria-label="__('Ticket schließen')"
+            @click="emit('close')"
+          >
+            <template #icon>
+              <LucideX class="size-4" />
+            </template>
+          </Button>
         </div>
       </div>
 
@@ -206,6 +214,7 @@ import TicketTextEditor from "@/pages/ticket/TicketTextEditor.vue";
 import { ITicket } from "@/pages/ticket/symbols";
 import LucideMaximize2 from "~icons/lucide/maximize-2";
 import LucideMinimize2 from "~icons/lucide/minimize-2";
+import LucideX from "~icons/lucide/x";
 
 interface Props {
   ticketId: string;

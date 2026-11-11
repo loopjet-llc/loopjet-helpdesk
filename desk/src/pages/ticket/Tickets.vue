@@ -12,7 +12,7 @@
       </template>
       <template #right-header>
         <div class="flex items-center gap-2">
-          <div class="flex rounded-lg bg-surface-gray-2 p-1">
+          <div class="flex rounded-6 bg-surface-gray-2 p-1">
             <Button
               :variant="viewMode === 'kanban' ? 'solid' : 'ghost'"
               :label="__('Board')"
