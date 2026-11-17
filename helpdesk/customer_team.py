@@ -53,11 +53,16 @@ def project_options(user: str) -> list[dict]:
     customers = frappe.get_all(
         "HD Customer",
         filters={"name": ["in", accounts]},
-        fields=["name", "project_label"],
+        fields=["name", "customer_name", "collaboration_team", "project_label"],
     )
     return sorted(
         (
-            {"customer": row.name, "label": row.project_label or row.name}
+            {
+                "customer": row.name,
+                "company": row.collaboration_team or row.customer_name or row.name,
+                "project_label": row.project_label or "",
+                "label": row.project_label or row.name,
+            }
             for row in customers
         ),
         key=lambda row: row["label"].casefold(),

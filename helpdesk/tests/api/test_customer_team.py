@@ -67,8 +67,25 @@ class TestCustomerTeam(FrappeTestCase):
         project_as_customer.project_label = "Other name"
         with self.assertRaises(frappe.PermissionError):
             project_as_customer.save(ignore_permissions=True)
+        options = get_projects()
+        self.assertEqual({row["label"] for row in options}, {"DHW ERP", "CloudMensa"})
+        self.assertEqual({row["company"] for row in options}, {company.name})
         self.assertEqual(
-            {row["label"] for row in get_projects()}, {"DHW ERP", "CloudMensa"}
+            {row["project_label"] for row in options}, {"DHW ERP", "CloudMensa"}
+        )
+        created_for_other_project = frappe.get_doc(
+            {
+                "doctype": "HD Ticket",
+                "subject": "Team A chooses CloudMensa",
+                "description": "Ticket for the shared company project",
+                "customer": project.name,
+            }
+        ).insert()
+        self.assertEqual(created_for_other_project.customer, project.name)
+        self.assertEqual(created_for_other_project.raised_by, a["user"])
+        self.assertEqual(created_for_other_project.customer_assignee, a["user"])
+        self.assertEqual(
+            frappe.db.get_value("HD Ticket", ticket.name, "customer"), project.name
         )
         project_list = get_list_data(
             "HD Ticket",
@@ -185,6 +202,15 @@ class TestCustomerTeam(FrappeTestCase):
 
         frappe.set_user(outsider["user"])
         self.assertEqual({row["customer"] for row in get_projects()}, {other.name})
+        with self.assertRaises(frappe.ValidationError):
+            frappe.get_doc(
+                {
+                    "doctype": "HD Ticket",
+                    "subject": "Wrong company project",
+                    "description": "Should not be accepted",
+                    "customer": project.name,
+                }
+            ).insert()
         with self.assertRaises(frappe.PermissionError):
             get_members(ticket.name)
         self.assertFalse(frappe.has_permission("HD Ticket", "read", ticket.name))

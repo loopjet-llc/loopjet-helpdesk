@@ -10,6 +10,14 @@
           :actions="ticket.data._customActions"
         />
         <Button
+          v-if="ticket.data.can_reopen"
+          :label="__('Ticket wieder öffnen')"
+          theme="gray"
+          variant="solid"
+          :loading="reopenTicket.loading"
+          @click="reopenTicket.submit()"
+        />
+        <Button
           v-if="ticket.data.status !== 'Closed'"
           :label="__('Close')"
           theme="gray"
@@ -202,6 +210,19 @@ const ticket = createResource({
       toast.error(err.messages?.[0] || __("Could not load the ticket."));
     }
     router.replace("/my-tickets");
+  },
+});
+
+const reopenTicket = createResource({
+  url: "helpdesk.helpdesk.doctype.hd_ticket.api.reopen",
+  makeParams: () => ({ name: props.ticketId }),
+  onSuccess: () => {
+    ticket.reload();
+    toast.success(__("Ticket wieder geöffnet."));
+  },
+  onError: (err: FrappeResourceError) => {
+    toast.error(err.messages?.[0] || __("Ticket konnte nicht wieder geöffnet werden."));
+    ticket.reload();
   },
 });
 

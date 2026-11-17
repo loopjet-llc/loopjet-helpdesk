@@ -31,6 +31,23 @@ def new(doc: dict, attachments: list[dict] = []):
 
 
 @frappe.whitelist()
+def reopen(name: str) -> dict:
+    """Let a ticket reader reopen an unmerged resolved or closed ticket."""
+    frappe.has_permission("HD Ticket", "read", name, throw=True)
+    doc = frappe.get_doc("HD Ticket", name)
+    if doc.status_category != "Resolved" or doc.is_merged:
+        frappe.throw(
+            _("Only resolved or closed tickets can be reopened."),
+            frappe.ValidationError,
+        )
+    doc.status = "Open"
+    doc.flags.ignore_closed_ticket_guard = True
+    doc.flags.customer_reply_reopen = True
+    doc.save(ignore_permissions=True)
+    return {"status": doc.status}
+
+
+@frappe.whitelist()
 def get_one(name: str):
     """The customer portal's ticket page: the ticket as this user may read it,
     its conversation, the contact card, the template rows and the form script."""
@@ -38,6 +55,7 @@ def get_one(name: str):
     fields = TicketFields()
 
     doc = frappe.get_doc("HD Ticket", name)
+    can_reopen = doc.status_category == "Resolved" and not doc.is_merged
     # strips permlevel fields the caller cannot read; no-op for agents
     doc.apply_fieldlevel_read_permissions()
     ticket = fields.strip_hidden_fields(doc.as_dict())
@@ -55,6 +73,7 @@ def get_one(name: str):
 
     return {
         **ticket,
+        "can_reopen": can_reopen,
         "communications": get_communications(name),
         "contact": contact,
         "template": {"fields": fields.get_form()},
@@ -597,7 +616,6 @@ def get_ticket_assignees(ticket: str) -> list[dict]:
 def get_public_comment_recipients(ticket: str):
     frappe.has_permission("HD Ticket", "read", ticket, throw=True)
     return resolve_public_comment_recipients(frappe.get_doc("HD Ticket", ticket))
-
 
 
 def show_banner_next_day(ticket):

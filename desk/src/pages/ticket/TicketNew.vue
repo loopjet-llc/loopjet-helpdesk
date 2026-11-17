@@ -23,6 +23,55 @@
         <label class="text-sm text-ink-gray-7">{{ __("Priority") }}</label>
         <TicketPrioritySelect v-model="priority" class="w-full sm:w-64" />
       </div>
+      <div v-if="isCustomerPortal && companies.length" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+          <label for="ticket-company" class="text-sm text-ink-gray-7">
+            {{ __("Kunde") }}
+          </label>
+          <select
+            v-if="companies.length > 1"
+            id="ticket-company"
+            v-model="selectedCompany"
+            class="w-full rounded-4 border border-outline-gray-2 bg-surface-base px-3 py-2 text-p-sm text-ink-gray-8 focus:border-outline-gray-4 focus:outline-none sm:max-w-md"
+            @change="selectedProject = ''"
+          >
+            <option value="">{{ __("Kunde auswählen") }}</option>
+            <option v-for="company in companies" :key="company" :value="company">
+              {{ company }}
+            </option>
+          </select>
+          <div v-else id="ticket-company" class="text-p-sm font-medium text-ink-gray-9">
+            {{ activeCompany }}
+          </div>
+        </div>
+        <div v-if="companyProjects.length" class="flex flex-col gap-2">
+          <label for="ticket-project" class="text-sm text-ink-gray-7">
+            {{ __("Projekt") }}
+          </label>
+          <select
+            v-if="companyProjects.length > 1"
+            id="ticket-project"
+            v-model="selectedProject"
+            class="w-full rounded-4 border border-outline-gray-2 bg-surface-base px-3 py-2 text-p-sm text-ink-gray-8 focus:border-outline-gray-4 focus:outline-none sm:max-w-md"
+          >
+            <option value="">{{ __("Projekt auswählen") }}</option>
+            <option
+              v-for="project in companyProjects"
+              :key="project.customer"
+              :value="project.customer"
+            >
+              {{ project.label }}
+            </option>
+          </select>
+          <div
+            v-else-if="companyProjects[0].project_label"
+            id="ticket-project"
+            class="text-p-sm font-medium text-ink-gray-9"
+          >
+            {{ companyProjects[0].label }}
+          </div>
+        </div>
+      </div>
       <!-- custom fields -->
       <div
         class="grid grid-cols-1 gap-4 sm:grid-cols-3"
@@ -158,6 +207,7 @@
 <script setup lang="ts">
 import { LayoutHeader, UniInput } from "@/components";
 import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
+import { useCustomerProjects } from "@/composables/useCustomerProjects";
 import {
   handleLinkFieldUpdate,
   handleSelectFieldUpdate,
@@ -202,6 +252,22 @@ const router = useRouter();
 const { $dialog } = globalStore();
 const { updateOnboardingStep } = useOnboarding("helpdesk") ?? {};
 const { isManager, userId: userID } = useAuthStore();
+const { projects } = useCustomerProjects();
+const selectedCompany = ref("");
+const selectedProject = ref("");
+const companies = computed(() =>
+  [...new Set(projects.value.map((project) => project.company))].sort()
+);
+const activeCompany = computed(
+  () => selectedCompany.value || (companies.value.length === 1 ? companies.value[0] : "")
+);
+const companyProjects = computed(() =>
+  projects.value.filter((project) => project.company === activeCompany.value)
+);
+const activeProject = computed(() =>
+  selectedProject.value ||
+  (companyProjects.value.length === 1 ? companyProjects.value[0].customer : "")
+);
 // Pre-filled by the command palette's "Create ticket …" fallback.
 const { isUploading, track } = useUploadTracker();
 // Read off the content model, not the editor ref: the ref is empty on the first
@@ -211,7 +277,8 @@ const canSubmit = computed(
     Boolean(subject.value) &&
     !isContentEmpty(description.value) &&
     !ticket.loading &&
-    !isUploading.value
+    !isUploading.value &&
+    (!isCustomerPortal.value || Boolean(activeProject.value))
 );
 
 const subject = ref(String(route.query.subject ?? ""));
@@ -269,7 +336,7 @@ const customOnChange = computed(() => template.data?._customOnChange);
 
 const visibleFields = computed(() => {
   let _fields = template.data?.fields?.filter(
-    (f) => !isCustomerPortal.value || f.fieldname !== "priority"
+    (f) => !isCustomerPortal.value || !["priority", "customer"].includes(f.fieldname)
   );
   if (!_fields) return [];
   return _fields.map((field) => parseField(field, templateFields));
@@ -294,6 +361,7 @@ const ticket = createResource({
       subject: subject.value,
       template: props.templateId,
       ...templateFields,
+      ...(isCustomerPortal.value ? { customer: activeProject.value } : {}),
       ...(isCustomerPortal.value && priority.value
         ? { priority: priority.value }
         : {}),
@@ -301,6 +369,9 @@ const ticket = createResource({
     attachments: attachments.value,
   }),
   validate: (params) => {
+    if (isCustomerPortal.value && !activeProject.value) {
+      return __("Projekt auswählen");
+    }
     const fields = visibleFields.value?.filter((f) => f.required) || [];
     const toVerify = [...fields, "subject", "description"];
     for (const field of toVerify) {

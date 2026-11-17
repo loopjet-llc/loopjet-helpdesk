@@ -4,6 +4,8 @@ import { isCustomerPortal } from "@/utils";
 
 export interface CustomerProject {
   customer: string;
+  company: string;
+  project_label: string;
   label: string;
 }
 
