@@ -79,6 +79,18 @@
       </div>
 
       <div
+        v-if="isCustomerPortal && customerTicket.data?.can_reopen"
+        class="border-b px-4 py-3"
+      >
+        <Button
+          :label="__('Ticket wieder öffnen')"
+          variant="solid"
+          :loading="customerReopen.loading"
+          @click="customerReopen.submit()"
+        />
+      </div>
+
+      <div
         v-if="displayTicket"
         class="grid grid-cols-3 divide-x border-b bg-surface-gray-1"
       >
@@ -372,6 +384,19 @@ const customerTicket = createResource({
   params: { name: props.ticketId },
   auto: props.isCustomerPortal,
   onError: () => toast.error(__("Ticket konnte nicht geladen werden.")),
+});
+const customerReopen = createResource({
+  url: "helpdesk.helpdesk.doctype.hd_ticket.api.reopen",
+  makeParams: () => ({ name: props.ticketId }),
+  onSuccess: () => {
+    customerTicket.reload();
+    emit("updated");
+    toast.success(__("Ticket wieder geöffnet."));
+  },
+  onError: () => {
+    customerTicket.reload();
+    toast.error(__("Ticket konnte nicht wieder geöffnet werden."));
+  },
 });
 provide(ITicket, customerTicket as any);
 const customerTeamMembers = createResource({
