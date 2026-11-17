@@ -85,10 +85,10 @@
                   <span
                     class="grid size-6 shrink-0 place-items-center rounded-full bg-surface-blue-2 text-[10px] font-semibold text-ink-blue-8"
                   >
-                    {{ assigneeInitials(ticket._assign) }}
+                    {{ assigneeInitials(displayAssignee(ticket)) }}
                   </span>
                   <span class="truncate text-p-xs text-ink-gray-6">
-                    {{ assigneeLabel(ticket._assign) }}
+                    {{ displayAssignee(ticket) }}
                   </span>
                 </div>
                 <span
@@ -224,8 +224,15 @@ function assigneeLabel(value) {
   return names.length > 1 ? `${first} +${names.length - 1}` : first;
 }
 
-function assigneeInitials(value) {
-  const label = assigneeLabel(value);
+function displayAssignee(ticket) {
+  if (!props.isCustomerPortal) return assigneeLabel(ticket._assign);
+  const user = ticket.customer_assignee;
+  return user
+    ? user.split("@")[0].replace(/[._-]/g, " ")
+    : __("Nicht zugewiesen");
+}
+
+function assigneeInitials(label: string) {
   if (label === __("Nicht zugewiesen")) return "?";
   return label
     .split(" ")

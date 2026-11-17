@@ -55,6 +55,7 @@
   "additional_info",
   "contact",
   "customer",
+  "customer_assignee",
   "email_account",
   "column_break_16",
   "via_customer_portal",
@@ -354,6 +355,13 @@
    "in_standard_filter": 1,
    "label": "Customer",
    "options": "HD Customer",
+   "permlevel": 7
+  },
+  {
+   "fieldname": "customer_assignee",
+   "fieldtype": "Link",
+   "label": "Customer Assignee",
+   "options": "User",
    "permlevel": 7
   },
   {

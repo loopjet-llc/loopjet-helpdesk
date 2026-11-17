@@ -4,6 +4,7 @@
     ref="e"
     :model-value="content"
     :placeholder="placeholder"
+    :mentions="mentions"
     :upload-function="uploadFunction"
     @update:model-value="$emit('update:content', $event)"
     @clear="() => $emit('update:attachments', [])"
@@ -93,6 +94,7 @@ import { useAuthStore } from "@/stores/auth";
 import { File } from "@/types";
 import { removeAttachmentFromServer } from "@/utils";
 import { FileUploader, toast } from "frappe-ui";
+import type { MentionSuggestionItem } from "frappe-ui/editor";
 import { computed, ref } from "vue";
 
 interface P {
@@ -101,6 +103,7 @@ interface P {
   attachments: File[];
   expand?: boolean;
   uploadFunction?: (file: any, options?: any) => Promise<any>;
+  mentions?: MentionSuggestionItem[];
 }
 
 interface E {

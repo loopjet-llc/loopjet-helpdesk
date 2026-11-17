@@ -11,6 +11,7 @@
   "customer_name",
   "customer_type",
   "domain",
+  "collaboration_team",
   "erpnext_customer",
   "country",
   "column_break_fead",
@@ -47,6 +48,14 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Domain"
+  },
+  {
+   "description": "Customers with the same company team can collaborate on each other's tickets.",
+   "fieldname": "collaboration_team",
+   "fieldtype": "Link",
+   "label": "Company Team",
+   "options": "HD Customer",
+   "permlevel": 8
   },
   {
    "fieldname": "references_tab",
@@ -120,6 +129,12 @@
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
+  {
+   "permlevel": 8,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,

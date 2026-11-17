@@ -69,6 +69,7 @@
             v-model:content="editorContent"
             v-model:expand="isExpanded"
             :placeholder="__('Type a message')"
+            :mentions="teamMentionOptions"
             autofocus
             @clear="() => (isExpanded = false)"
             :uploadFunction="
@@ -200,6 +201,19 @@ const canSend = computed(
 const editor = ref(null);
 const editorContent = ref("");
 const attachments = ref([]);
+const teamMembers = createResource({
+  url: "helpdesk.api.customer_team.get_members",
+  params: { ticket: props.ticketId },
+  cache: ["Customer Team", props.ticketId],
+  auto: true,
+});
+const teamMentionOptions = computed(() =>
+  (teamMembers.data || []).map((member) => ({
+    label: member.label,
+    value: member.user,
+    image: member.image,
+  }))
+);
 const showFeedbackDialog = ref(false);
 const isExpanded = ref(false);
 

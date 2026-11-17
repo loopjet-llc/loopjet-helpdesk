@@ -70,6 +70,21 @@ class HDCustomer(Document):
 
     def validate(self):
         self.validate_contacts()
+        self.validate_collaboration_team()
+
+    def validate_collaboration_team(self):
+        if not self.has_value_changed("collaboration_team") or (
+            self.is_new() and not self.collaboration_team
+        ):
+            return
+        if (
+            frappe.session.user != "Administrator"
+            and "System Manager" not in frappe.get_roles()
+        ):
+            frappe.throw(
+                _("Only a System Manager can change the company team."),
+                frappe.PermissionError,
+            )
 
     def validate_contacts(self):
         if not self.contacts:

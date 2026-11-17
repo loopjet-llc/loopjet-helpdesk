@@ -133,21 +133,35 @@
             v-else
             :ticket-id="ticketId"
             :model-value="displayTicket.priority"
+            :disabled="
+              displayTicket.status === 'Closed' ||
+              !!displayTicket.feedback_rating
+            "
             class="mt-1 w-full text-sm"
             @updated="handleCustomerPriorityUpdated"
           />
         </div>
         <div class="min-w-0 px-4 py-3">
-          <span class="text-p-xs text-ink-gray-5">{{ __("Zugewiesen") }}</span>
+          <span class="text-p-xs text-ink-gray-5">{{
+            isCustomerPortal ? __("Kundenzuständig") : __("Zugewiesen")
+          }}</span>
           <AssignTo
             v-if="!isCustomerPortal"
             class="mt-1"
             hide-label
             @updated="handleAssigneesUpdated"
           />
-          <p v-else class="mt-1 truncate text-sm font-medium text-ink-gray-8">
-            {{ assigneeLabel(displayTicket._assign) }}
-          </p>
+          <TicketCustomerAssigneeSelect
+            v-else-if="displayTicket.customer"
+            :ticket-id="ticketId"
+            :model-value="displayTicket.customer_assignee"
+            :disabled="
+              displayTicket.status === 'Closed' ||
+              !!displayTicket.feedback_rating
+            "
+            class="mt-1 w-full text-sm"
+            @updated="handleCustomerPriorityUpdated"
+          />
         </div>
       </div>
 
@@ -176,6 +190,7 @@
             v-model:content="customerContent"
             v-model:expand="customerEditorExpanded"
             :placeholder="__('Kommentar schreiben …')"
+            :mentions="customerMentionOptions"
             :upload-function="
               (file) => uploadFunction(file, 'HD Ticket', ticketId)
             "
@@ -216,6 +231,7 @@ import { computed, onMounted, onUnmounted, provide, ref } from "vue";
 import TicketConversation from "@/pages/ticket/TicketConversation.vue";
 import TicketTextEditor from "@/pages/ticket/TicketTextEditor.vue";
 import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
+import TicketCustomerAssigneeSelect from "@/components/ticket/TicketCustomerAssigneeSelect.vue";
 import { ITicket } from "@/pages/ticket/symbols";
 import LucideMaximize2 from "~icons/lucide/maximize-2";
 import LucideMinimize2 from "~icons/lucide/minimize-2";
@@ -333,6 +349,19 @@ const customerTicket = createResource({
   onError: () => toast.error(__("Ticket konnte nicht geladen werden.")),
 });
 provide(ITicket, customerTicket as any);
+const customerTeamMembers = createResource({
+  url: "helpdesk.api.customer_team.get_members",
+  params: { ticket: props.ticketId },
+  cache: ["Customer Team", props.ticketId],
+  auto: props.isCustomerPortal,
+});
+const customerMentionOptions = computed(() =>
+  (customerTeamMembers.data || []).map((member) => ({
+    label: member.label,
+    value: member.user,
+    image: member.image,
+  }))
+);
 
 const displayTicket = computed(() =>
   props.isCustomerPortal ? customerTicket.data : agentTicket.value?.doc
@@ -341,24 +370,6 @@ const displayTicket = computed(() =>
 function customerStatusLabel(status: string) {
   const record = getStatus(status);
   return record?.label_customer || record?.label_agent || status;
-}
-
-function assignees(value: string | string[] | undefined): string[] {
-  if (Array.isArray(value)) return value;
-  if (!value) return [];
-  try {
-    return JSON.parse(value);
-  } catch {
-    return [];
-  }
-}
-
-function assigneeLabel(value) {
-  const names = assignees(value);
-  if (!names.length) return __("Nicht zugewiesen");
-  return names
-    .map((name) => name.split("@")[0].replace(/[._-]/g, " "))
-    .join(", ");
 }
 
 function updateAgentField(field: string, value: string) {
