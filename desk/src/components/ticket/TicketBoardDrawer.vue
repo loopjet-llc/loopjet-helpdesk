@@ -129,9 +129,13 @@
               {{ __(priority) }}
             </option>
           </select>
-          <p v-else class="mt-1 truncate text-sm font-medium text-ink-gray-8">
-            {{ displayTicket.priority || "–" }}
-          </p>
+          <TicketPrioritySelect
+            v-else
+            :ticket-id="ticketId"
+            :model-value="displayTicket.priority"
+            class="mt-1 w-full text-sm"
+            @updated="handleCustomerPriorityUpdated"
+          />
         </div>
         <div class="min-w-0 px-4 py-3">
           <span class="text-p-xs text-ink-gray-5">{{ __("Zugewiesen") }}</span>
@@ -211,6 +215,7 @@ import { Button, createResource, LoadingIndicator, toast } from "frappe-ui";
 import { computed, onMounted, onUnmounted, provide, ref } from "vue";
 import TicketConversation from "@/pages/ticket/TicketConversation.vue";
 import TicketTextEditor from "@/pages/ticket/TicketTextEditor.vue";
+import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
 import { ITicket } from "@/pages/ticket/symbols";
 import LucideMaximize2 from "~icons/lucide/maximize-2";
 import LucideMinimize2 from "~icons/lucide/minimize-2";
@@ -367,6 +372,11 @@ function updateAgentField(field: string, value: string) {
       },
     }
   );
+}
+
+function handleCustomerPriorityUpdated() {
+  customerTicket.reload();
+  emit("updated");
 }
 
 function handleAssigneesUpdated() {

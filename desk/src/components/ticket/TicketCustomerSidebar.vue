@@ -93,6 +93,17 @@
       :ticket="ticket.data"
     />
     <div class="flex flex-col gap-4 pt-0 px-5 py-3 overflow-y-scroll">
+      <div class="flex items-center text-base leading-5">
+        <span class="w-[126px] shrink-0 text-sm text-ink-gray-5">{{
+          __("Priority")
+        }}</span>
+        <TicketPrioritySelect
+          :ticket-id="ticket.data.name"
+          :model-value="ticket.data.priority"
+          class="flex-1"
+          @updated="ticket.reload()"
+        />
+      </div>
       <div
         class="flex items-center text-base leading-5"
         v-for="field in ticketAdditionalInfo"
@@ -119,6 +130,8 @@ import {
   type SLAMetric,
 } from "@/composables/useSLA";
 import { ITicket } from "@/pages/ticket/symbols";
+import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
+import { __ } from "@/translation";
 import { Field } from "@/types";
 import { dateFormat, dateTooltipFormat } from "@/utils";
 import { Avatar, dayjs, dayjsLocal, Tooltip } from "frappe-ui";
@@ -191,11 +204,6 @@ const ticketAdditionalInfo = computed(() => {
       fieldname: "team",
       label: "Team",
       value: ticket.data.agent_group,
-    },
-    {
-      fieldname: "priority",
-      label: "Priority",
-      value: ticket.data.priority,
     },
   ];
   const custom_fields = ticket.data.template.fields
