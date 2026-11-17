@@ -30,6 +30,17 @@ reply. Agent-only internal comments are unchanged.
 Priority changes use the existing `Default` ticket-template permission row.
 That row must expose `priority` to Everyone and allow edits after creation.
 
+## Project names and filtering
+
+Each `HD Customer` has an optional System-Manager-owned `project_label`.
+The customer portal uses that short name as a tag on ticket cards, list rows,
+the board drawer, and the ticket detail. Without a label, it uses the customer
+record name. The customer ticket list has an `Alle Projekte` selector and one
+option for every project account the signed-in user can see. The selector
+filters both board and list on the server, including the total count; it does
+not change saved views. The server validates each selected project against
+the user's own and explicitly linked company-team accounts.
+
 ## Loopjet production configuration
 
 After the release is deployed and migrated, set `collaboration_team` on both
@@ -37,3 +48,7 @@ After the release is deployed and migrated, set `collaboration_team` on both
 record. That creates one company team for the DHW ERP and CloudMensa project
 accounts. The current invoice-only contact without an enabled portal user does
 not appear in the assignment or mention picker.
+
+Set `project_label` on `DHW-ERP` to `DHW ERP` and on `Deutsche
+Hochschulwerbung und -vertriebs GmbH` to `CloudMensa` after the schema
+migration. The two customer records and their tickets remain separate.

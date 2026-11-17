@@ -3,7 +3,20 @@
 import frappe
 from frappe import _
 
-from helpdesk.customer_team import email_team_member, is_team_member, team_members
+from helpdesk.customer_team import (
+    email_team_member,
+    is_team_member,
+    project_options,
+    team_members,
+)
+
+
+@frappe.whitelist()
+def get_projects() -> list[dict]:
+    """Only project accounts visible to the current portal user."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Please sign in to view projects."), frappe.PermissionError)
+    return project_options(frappe.session.user)
 
 
 @frappe.whitelist()

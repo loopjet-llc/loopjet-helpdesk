@@ -6,7 +6,8 @@ import frappe
 from frappe.client import set_value as client_set_value
 from frappe.tests.utils import FrappeTestCase
 
-from helpdesk.api.customer_team import assign, get_members
+from helpdesk.api.customer_team import assign, get_members, get_projects
+from helpdesk.api.doc import get_list_data
 from helpdesk.customer_team import mentioned_users
 from helpdesk.test_utils import (
     create_contact,
@@ -32,7 +33,10 @@ class TestCustomerTeam(FrappeTestCase):
         company.collaboration_team = company.name
         company.save()
         project.collaboration_team = company.name
+        project.project_label = "CloudMensa"
         project.save()
+        company.project_label = "DHW ERP"
+        company.save()
 
         ticket = make_ticket(
             customer=project.name,
@@ -52,6 +56,37 @@ class TestCustomerTeam(FrappeTestCase):
         project_as_customer.collaboration_team = other.name
         with self.assertRaises(frappe.PermissionError):
             project_as_customer.save(ignore_permissions=True)
+        project_as_customer.reload()
+        project_as_customer.project_label = "Other name"
+        with self.assertRaises(frappe.PermissionError):
+            project_as_customer.save(ignore_permissions=True)
+        self.assertEqual(
+            {row["label"] for row in get_projects()}, {"DHW ERP", "CloudMensa"}
+        )
+        project_list = get_list_data(
+            "HD Ticket",
+            filters=[["customer", "=", company.name]],
+            project_customer=project.name,
+            show_customer_portal_fields=True,
+            is_default=True,
+        )
+        self.assertIn(ticket.name, {row.name for row in project_list["data"]})
+        self.assertEqual(project_list["total_count"], 1)
+        self.assertEqual(project_list["data"][0].customer, project.name)
+        all_projects = get_list_data(
+            "HD Ticket",
+            filters=[["customer", "=", other.name]],
+            project_customer="",
+            show_customer_portal_fields=True,
+        )
+        self.assertIn(ticket.name, {row.name for row in all_projects["data"]})
+        self.assertNotIn(unrelated.name, {row.name for row in all_projects["data"]})
+        with self.assertRaises(frappe.PermissionError):
+            get_list_data(
+                "HD Ticket",
+                project_customer=other.name,
+                show_customer_portal_fields=True,
+            )
         visible = set(frappe.get_list("HD Ticket", pluck="name"))
         self.assertIn(ticket.name, visible)
         self.assertNotIn(unrelated.name, visible)
@@ -117,6 +152,7 @@ class TestCustomerTeam(FrappeTestCase):
             assign(ticket.name, None)
 
         frappe.set_user(outsider["user"])
+        self.assertEqual({row["customer"] for row in get_projects()}, {other.name})
         with self.assertRaises(frappe.PermissionError):
             get_members(ticket.name)
         self.assertFalse(frappe.has_permission("HD Ticket", "read", ticket.name))

@@ -40,6 +40,29 @@ def visible_team_accounts(user: str) -> list[str]:
     return sorted(grouped)
 
 
+def project_accounts_for_user(user: str) -> list[str]:
+    """Accounts whose tickets this portal user can see."""
+    return sorted(set(get_customers(user)) | set(visible_team_accounts(user)))
+
+
+def project_options(user: str) -> list[dict]:
+    accounts = project_accounts_for_user(user)
+    if not accounts:
+        return []
+    customers = frappe.get_all(
+        "HD Customer",
+        filters={"name": ["in", accounts]},
+        fields=["name", "project_label"],
+    )
+    return sorted(
+        (
+            {"customer": row.name, "label": row.project_label or row.name}
+            for row in customers
+        ),
+        key=lambda row: row["label"].casefold(),
+    )
+
+
 def team_members(customer: str | None) -> list[dict]:
     """Enabled portal users linked to contacts in this ticket's company team."""
     accounts = team_accounts(customer)

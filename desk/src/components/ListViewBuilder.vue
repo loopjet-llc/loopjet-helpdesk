@@ -47,6 +47,7 @@
     v-else-if="options.viewMode === 'kanban' && list.data?.data?.length > 0"
     :rows="list.data.data"
     :is-customer-portal="options.isCustomerPortal"
+    :project-labels="options.projectLabels"
     @open="(ticket) => emit('rowClick', ticket)"
     @updated="reload"
   />
@@ -229,6 +230,8 @@ interface P {
     selectBannerActions?: Record<string, any>;
     default_page_length?: number;
     isCustomerPortal?: boolean;
+    projectFilter?: string | null;
+    projectLabels?: Record<string, string>;
     rowRoute?: Record<string, string>;
     viewMode?: "list" | "kanban";
   };
@@ -397,6 +400,7 @@ const defaultParams = reactive({
   columns: [],
   rows: [],
   show_customer_portal_fields: options.value.isCustomerPortal,
+  project_customer: options.value.projectFilter,
   is_default: false,
 });
 
@@ -421,6 +425,15 @@ const list = createResource({
     columns.value = data.columns;
   },
 });
+
+watch(
+  () => options.value.projectFilter,
+  (project) => {
+    defaultParams.project_customer = project;
+    defaultParams.page_length = options.value.default_page_length;
+    list.submit({ ...defaultParams });
+  }
+);
 
 const exposeFunctions = {
   list,
