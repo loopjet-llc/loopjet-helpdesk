@@ -58,6 +58,7 @@ function sanitize(html: string) {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "video"]),
     allowedAttributes: {
       "*": ["style", "align", "valign", "width", "height", "bgcolor"],
+      span: ["class"],
       a: ["href"],
       video: ["src", "controls"],
       img: ["src"],
@@ -65,6 +66,17 @@ function sanitize(html: string) {
       td: ["colspan", "rowspan"],
       th: ["colspan", "rowspan"],
     },
+    allowedClasses: { span: ["mention"] },
   });
 }
 </script>
+
+<style scoped>
+:deep(.mention) {
+  border-radius: 0.25rem;
+  background: var(--surface-gray-2);
+  color: var(--ink-gray-9);
+  font-weight: 600;
+  padding: 0.05rem 0.2rem;
+}
+</style>

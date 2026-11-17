@@ -16,6 +16,24 @@
       <TicketPrioritySelect
         :ticket-id="ticket.data.name"
         :model-value="ticket.data.priority"
+        :disabled="
+          ticket.data.status === 'Closed' || !!ticket.data.feedback_rating
+        "
+        class="min-w-0 flex-1"
+        @updated="ticket.reload()"
+      />
+    </div>
+
+    <div v-if="ticket.data.customer" class="flex items-center gap-4">
+      <span class="w-[150px] shrink-0 text-p-sm text-ink-gray-5">{{
+        __("Customer assignee")
+      }}</span>
+      <TicketCustomerAssigneeSelect
+        :ticket-id="ticket.data.name"
+        :model-value="ticket.data.customer_assignee"
+        :disabled="
+          ticket.data.status === 'Closed' || !!ticket.data.feedback_rating
+        "
         class="min-w-0 flex-1"
         @updated="ticket.reload()"
       />
@@ -56,6 +74,7 @@
 <script setup lang="ts">
 import { dayjs } from "frappe-ui";
 import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
+import TicketCustomerAssigneeSelect from "@/components/ticket/TicketCustomerAssigneeSelect.vue";
 import {
   slaLabel,
   slaTextColor,

@@ -27,6 +27,13 @@ from pypika.queries import Query
 from pypika.terms import Criterion
 
 from helpdesk.consts import SERVER_COMPUTED_FIELDS
+from helpdesk.customer_team import (
+    email_team_member,
+    is_team_member,
+    mentioned_users,
+    team_members,
+    visible_team_accounts,
+)
 from helpdesk.helpdesk.doctype.hd_settings.helpers import (
     get_default_email_content,
     is_email_content_empty,
@@ -106,6 +113,20 @@ class HDTicket(Document, CustomerEditController):
 
     def validate(self):
         self.validate_feedback()
+        self.validate_customer_assignee()
+
+    def validate_customer_assignee(self):
+        if not self.customer_assignee or not self.has_value_changed(
+            "customer_assignee"
+        ):
+            return
+        if self.customer_assignee not in {
+            member["user"] for member in team_members(self.customer)
+        }:
+            frappe.throw(
+                _("The customer assignee must belong to this company team."),
+                frappe.PermissionError,
+            )
 
     def before_save(self):
         self.set_resolution_date()
@@ -841,6 +862,14 @@ class HDTicket(Document, CustomerEditController):
     def create_communication_via_contact(
         self, message: str, attachments: list[dict] = [], new_ticket: bool = False
     ):
+        mentions = []
+        if not new_ticket and not is_agent():
+            mentions = mentioned_users(self.customer, message)
+            if mentions and not is_team_member(self.customer):
+                frappe.throw(
+                    _("You are not a member of this company team."),
+                    frappe.PermissionError,
+                )
         if not new_ticket and frappe.db.get_single_value(
             "HD Settings", "enable_reply_email_to_agent"
         ):
@@ -869,9 +898,13 @@ class HDTicket(Document, CustomerEditController):
         c.ignore_mandatory = True
         c.save(ignore_permissions=True)
 
+        for user in mentions:
+            if user != frappe.session.user:
+                email_team_member(self, user, "mention", c.name)
+
         _attachments = self.get("attachments") or attachments or []
         if not len(_attachments):
-            return
+            return c.name
         QBFile = frappe.qb.DocType("File")
         condition_name = [QBFile.name == i["name"] for i in _attachments]
         frappe.qb.update(QBFile).set(QBFile.attached_to_name, c.name).set(
@@ -884,6 +917,7 @@ class HDTicket(Document, CustomerEditController):
         )
         for url in file_urls:
             self.attach_file_with_doc("HD Ticket", self.name, url)
+        return c.name
 
     def handle_inline_media_new_ticket(self):
         soup = BeautifulSoup(self.description, "html.parser")
@@ -1274,6 +1308,13 @@ class HDTicket(Document, CustomerEditController):
                 "width": "10rem",
             },
             {
+                "label": "Customer assignee",
+                "type": "Link",
+                "options": "User",
+                "key": "customer_assignee",
+                "width": "13rem",
+            },
+            {
                 "label": "First response",
                 "type": "Datetime",
                 "key": "response_by",
@@ -1312,6 +1353,7 @@ class HDTicket(Document, CustomerEditController):
             "response_by",
             "resolution_by",
             "customer",
+            "customer_assignee",
             "first_responded_on",
             "modified",
             "creation",
@@ -1389,6 +1431,9 @@ def has_permission(doc, user=None):
         return True
     if _is_customer_manager(doc.customer, user):
         return True
+    if not is_agent(user) and is_team_member(doc.customer, user):
+        if doc.customer_assignee == user or doc.customer in visible_team_accounts(user):
+            return True
     if not is_agent(user):
         return False
     return _agent_has_permission(doc, user)
@@ -1440,11 +1485,20 @@ def permission_query(user: str | None = None):
 
 
 def _customer_query(user: str) -> str:
-    """Non-agents see their own tickets, plus all tickets of customers they manage."""
+    """Add managed, assigned, and explicitly grouped company-team tickets."""
     query = _get_base_visibility(user)
     managed_customers = _get_managed_customers(user)
     if managed_customers:
         query += " OR " + _build_in_clause("customer", managed_customers)
+    team_customers = visible_team_accounts(user)
+    if team_customers:
+        query += " OR " + _build_in_clause("customer", team_customers)
+    memberships = get_customers(user)
+    if memberships:
+        query += " OR (`tabHD Ticket`.customer_assignee = {u} AND {customers})".format(
+            u=frappe.db.escape(user),
+            customers=_build_in_clause("customer", memberships),
+        )
     return query
 
 

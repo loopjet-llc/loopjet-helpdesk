@@ -2,7 +2,7 @@
   <select
     :value="modelValue || ''"
     :aria-label="__('Priority')"
-    :disabled="priorities.loading || save.loading"
+    :disabled="disabled || priorities.loading || save.loading"
     class="min-w-0 rounded-4 border border-outline-gray-2 bg-surface-base px-2 py-1 text-p-sm font-medium text-ink-gray-9 disabled:opacity-50"
     @change="onChange"
   >
@@ -34,6 +34,7 @@ import { computed } from "vue";
 const props = defineProps<{
   modelValue?: string;
   ticketId?: string;
+  disabled?: boolean;
 }>();
 const emit = defineEmits<{
   "update:modelValue": [value: string];

@@ -70,6 +70,7 @@ import {
   EditorBubbleMenu,
   EditorContent,
   EditorFixedMenu,
+  type MentionSuggestionItem,
 } from "frappe-ui/editor";
 import { computed, ref } from "vue";
 import {
@@ -82,6 +83,7 @@ interface P {
   modelValue: string;
   autofocus?: boolean;
   uploadFunction?: (file: any, options?: any) => Promise<any>;
+  mentions?: MentionSuggestionItem[];
 }
 
 interface E {
@@ -103,7 +105,9 @@ const content = computed({
   set: (value) => emit("update:modelValue", value),
 });
 
-const extensions = buildEditorExtensions();
+const extensions = buildEditorExtensions({
+  mentions: () => props.mentions ?? [],
+});
 
 const editor = computed(() => inner.value?.editor);
 
