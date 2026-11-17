@@ -28,6 +28,25 @@ SERVER_COMPUTED_FIELDS = [
 # the key authenticates guest feedback links; a secret is never display data
 NEVER_CUSTOMER_VISIBLE_FIELDS = ("key",)
 
+# SLA targets and performance measurements are internal support information.
+CUSTOMER_HIDDEN_SLA_FIELDS = frozenset(
+    {
+        "sla",
+        "agreement_status",
+        "response_by",
+        "resolution_by",
+        "first_responded_on",
+        "resolution_date",
+        "first_response_time",
+        "resolution_time",
+        "service_level_agreement_creation",
+        "first_response_failed_by",
+        "resolution_failed_by",
+        "total_hold_time",
+        "on_hold_since",
+    }
+)
+
 # kept out of the permlevel reset while a customer raises a ticket;
 # customer is here because the portal picker sends it and set_customer checks it
 PORTAL_INSERT_EXEMPT_FIELDS = [

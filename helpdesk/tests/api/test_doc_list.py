@@ -2,6 +2,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from helpdesk.api.doc import get_list_data
+from helpdesk.consts import CUSTOMER_HIDDEN_SLA_FIELDS
 from helpdesk.helpdesk.doctype.hd_ticket.hd_ticket import HDTicket
 from helpdesk.test_utils import (
     create_agent,
@@ -18,8 +19,6 @@ PORTAL_FIELDS = {
     "subject",
     "status",
     "priority",
-    "response_by",
-    "resolution_by",
     "creation",
 }
 
@@ -114,6 +113,25 @@ class TestGetListData(FrappeTestCase):
         portal_columns = HDTicket.default_list_data(True)["columns"]
         self.assertEqual(result["columns"], portal_columns)
         self.assertLessEqual({f["value"] for f in result["fields"]}, PORTAL_FIELDS)
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(result["rows"]))
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(result["data"][0]))
+
+    def test_customer_saved_view_cannot_show_sla_columns(self) -> None:
+        columns = [
+            {"label": "Subject", "type": "Data", "key": "subject"},
+            {"label": "Resolution", "type": "Datetime", "key": "resolution_by"},
+        ]
+        with self.set_user(self.customer["user"]):
+            result = get_list_data(
+                "HD Ticket",
+                columns=columns,
+                rows=["subject", "sla", "agreement_status"],
+                show_customer_portal_fields=True,
+            )
+
+        self.assertEqual(result["columns"], columns[:1])
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(result["rows"]))
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(result["data"][0]))
 
     def test_customer_sees_only_own_tickets(self) -> None:
         with self.set_user(self.customer["user"]):

@@ -6,12 +6,12 @@ from frappe.tests.utils import FrappeTestCase
 from helpdesk.api.doc import get_visible_custom_fields
 from helpdesk.consts import (
     CORE_TICKET_FIELDS,
+    CUSTOMER_HIDDEN_SLA_FIELDS,
     DEFAULT_TICKET_TEMPLATE,
     TICKET_INTERNAL_FIELD_PERMLEVEL,
 )
 from helpdesk.helpdesk.doctype.hd_ticket.api import (
     get_one,
-    get_ticket_customizations,
     merge_ticket,
 )
 from helpdesk.helpdesk.doctype.hd_ticket_template.api import get_one as get_ticket_form
@@ -50,6 +50,15 @@ class TestTicketFieldVisibility(FrappeTestCase):
         self.assertTrue(client_get("HD Ticket", ticket.name).get("response_by"))
         frappe.set_user(AGENT_EMAIL)
         self.assertTrue(get_one(ticket.name).get("response_by"))
+
+    def test_customer_ticket_payload_hides_sla_fields(self):
+        ticket = make_customer_ticket(self, CUSTOMER_EMAIL)
+
+        frappe.set_user(CUSTOMER_EMAIL)
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(get_one(ticket.name)))
+
+        frappe.set_user(AGENT_EMAIL)
+        self.assertIn("response_by", get_one(ticket.name))
 
     def test_hiding_the_contact_fields_still_returns_a_ticket(self):
         """get_one used to build the contact card out of raised_by, which hiding removes."""

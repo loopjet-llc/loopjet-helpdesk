@@ -8,3 +8,5 @@ Every new ticket has separate customer and support owners.
 - The support owner remains Frappe's `_assign`/ToDo assignment. Managers can change it from the customer portal as well as from the agent view; ordinary customers do not see that control. On Loopjet's site, the base `Support Rotation` assignment rule is enabled with only `a@loopjet.io` as a user, so every new unresolved ticket initially goes to Ahmad. Frappe's assignment rules apply only when no assignment exists, so a later manual assignment is retained.
 
 If an email sender has no enabled website user in the company team, the customer assignee remains empty until a team member or manager selects one.
+
+The customer board, ticket detail views, list columns, and portal API payloads omit internal SLA targets and performance metrics. Agents still see SLA information in their own workspace.

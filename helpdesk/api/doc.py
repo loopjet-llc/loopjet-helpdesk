@@ -7,6 +7,7 @@ from frappe.query_builder.functions import Date
 from pypika import Criterion
 
 from helpdesk.api.dashboard import COUNT_NAME
+from helpdesk.consts import CUSTOMER_HIDDEN_SLA_FIELDS
 from helpdesk.customer_team import project_accounts_for_user
 from helpdesk.utils import (
     agent_only,
@@ -37,6 +38,8 @@ def get_list_data(
     project_customer: str | None = None,
 ) -> dict:
     is_custom = False
+    if doctype == "HD Ticket" and not is_agent():
+        show_customer_portal_fields = True
 
     rows = frappe.parse_json(rows or "[]")
     columns = frappe.parse_json(columns or "[]")
@@ -134,6 +137,16 @@ def get_list_data(
                 )
             filters.append(["customer", "=", project_customer])
 
+    if doctype == "HD Ticket" and show_customer_portal_fields:
+        columns = [
+            column
+            for column in columns
+            if column.get("key") not in CUSTOMER_HIDDEN_SLA_FIELDS
+        ]
+        rows = [row for row in rows if row not in CUSTOMER_HIDDEN_SLA_FIELDS]
+        if group_by_field in CUSTOMER_HIDDEN_SLA_FIELDS:
+            group_by_field = None
+
     handle_at_me_support(filters)
     handle_assigned_on_filter(filters, doctype)
 
@@ -154,8 +167,9 @@ def get_list_data(
             rows.append("customer")
         rows.append("_seen") if "_seen" not in rows else rows
         # the SLA columns can't tell fulfilled from due without these, and no saved view lists them
-        for field in SLA_ROW_FIELDS:
-            rows.append(field) if field not in rows else rows
+        if not show_customer_portal_fields:
+            for field in SLA_ROW_FIELDS:
+                rows.append(field) if field not in rows else rows
 
     show_reporter = (
         doctype == "HD Ticket" and not show_customer_portal_fields and is_agent()
@@ -313,6 +327,8 @@ def get_filterable_fields(
     ignore_team_restrictions: bool = False,
 ):
     check_permissions(doctype, None)
+    if doctype == "HD Ticket" and not is_agent():
+        show_customer_portal_fields = True
     QBDocField = frappe.qb.DocType("DocField")
     QBCustomField = frappe.qb.DocType("Custom Field")
     allowed_fieldtypes = [
@@ -338,8 +354,6 @@ def get_filterable_fields(
         "subject",
         "status",
         "priority",
-        "response_by",
-        "resolution_by",
         "creation",
         "customer",
     ]
@@ -451,6 +465,8 @@ def get_filterable_fields(
 
 @frappe.whitelist()
 def sort_options(doctype: str, show_customer_portal_fields: bool = False):
+    if doctype == "HD Ticket" and not is_agent():
+        show_customer_portal_fields = True
     fields = frappe.get_meta(doctype).fields
     fields = [field for field in fields if field.fieldtype not in no_value_fields]
     fields = [
@@ -480,6 +496,8 @@ def sort_options(doctype: str, show_customer_portal_fields: bool = False):
 
 @frappe.whitelist()
 def get_quick_filters(doctype: str, show_customer_portal_fields: bool = False):
+    if doctype == "HD Ticket" and not is_agent():
+        show_customer_portal_fields = True
     meta = frappe.get_meta(doctype)
     fields = [field for field in meta.fields if field.in_standard_filter]
     quick_filters = []
@@ -531,10 +549,12 @@ def get_customer_portal_fields(doctype, fields):
         "subject",
         "status",
         "priority",
-        "response_by",
-        "resolution_by",
         "creation",
-        *visible_custom_fields,
+        *(
+            field
+            for field in visible_custom_fields
+            if field not in CUSTOMER_HIDDEN_SLA_FIELDS
+        ),
     ]
     fields = [field for field in fields if field.get("value") in customer_portal_fields]
     return fields

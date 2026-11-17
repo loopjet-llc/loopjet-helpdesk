@@ -49,21 +49,6 @@
     </div>
 
     <div
-      v-for="data in slaData"
-      :key="data.title"
-      class="flex items-center gap-4"
-    >
-      <Tooltip :text="dayjs(data.value).format('LLLL')">
-        <span class="w-[150px] shrink-0 text-p-sm text-ink-gray-5">{{
-          data.title
-        }}</span>
-      </Tooltip>
-      <span class="flex-1 truncate text-p-sm" :class="data.textColor">
-        {{ __(data.label) }}
-      </span>
-    </div>
-
-    <div
       v-for="field in customFields"
       :key="field.fieldname"
       class="flex items-center gap-4"
@@ -81,17 +66,10 @@
 </template>
 
 <script setup lang="ts">
-import { dayjs } from "frappe-ui";
 import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
 import TicketCustomerAssigneeSelect from "@/components/ticket/TicketCustomerAssigneeSelect.vue";
 import AssignTo from "@/components/ticket-agent/AssignTo.vue";
 import { useAuthStore } from "@/stores/auth";
-import {
-  slaLabel,
-  slaTextColor,
-  useSLA,
-  type SLAMetric,
-} from "@/composables/useSLA";
 import { __ } from "@/translation";
 import { Field } from "@/types";
 import { computed, inject } from "vue";
@@ -99,26 +77,6 @@ import { ITicket } from "./symbols";
 
 const ticket = inject(ITicket);
 const auth = useAuthStore();
-
-const { firstResponse, resolution } = useSLA(
-  computed(() => ({ doc: ticket.data }))
-);
-
-const slaData = computed(() =>
-  [
-    { title: "Expected First Response", metric: firstResponse.value },
-    { title: "Expected Resolution", metric: resolution.value },
-  ]
-    .filter((row): row is { title: string; metric: SLAMetric } =>
-      Boolean(row.metric)
-    )
-    .map((row) => ({
-      title: row.title,
-      value: row.metric.dueBy,
-      label: slaLabel(row.metric),
-      textColor: slaTextColor(row.metric),
-    }))
-);
 
 const customFields = computed(() =>
   ticket.data.template.fields.filter(
