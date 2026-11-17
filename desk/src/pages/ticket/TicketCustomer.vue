@@ -10,6 +10,14 @@
           :actions="ticket.data._customActions"
         />
         <Button
+          v-if="ticket.data.can_reopen"
+          :label="__('Ticket wieder öffnen')"
+          theme="gray"
+          variant="solid"
+          :loading="reopenTicket.loading"
+          @click="reopenTicket.submit()"
+        />
+        <Button
           v-if="ticket.data.status !== 'Closed'"
           :label="__('Close')"
           theme="gray"
@@ -125,6 +133,9 @@ import {
 import { useActiveViewers } from "@/composables/realtime";
 import { useScreenSize } from "@/composables/screen";
 import { useConfigStore } from "@/stores/config";
+import { useAuthStore } from "@/stores/auth";
+import { useTicket } from "@/composables/useTicket";
+import { AssigneeSymbol, TicketSymbol } from "@/types";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
@@ -166,6 +177,10 @@ interface P {
 const router = useRouter();
 const props = defineProps<P>();
 const { projectLabel } = useCustomerProjects();
+const auth = useAuthStore();
+const agentAssignment = auth.isAdmin || auth.isManager ? useTicket(props.ticketId) : null;
+provide(TicketSymbol, computed(() => agentAssignment?.ticket) as any);
+provide(AssigneeSymbol, computed(() => agentAssignment?.assignees) as any);
 
 const { getStatus } = useTicketStatusStore();
 
@@ -195,6 +210,19 @@ const ticket = createResource({
       toast.error(err.messages?.[0] || __("Could not load the ticket."));
     }
     router.replace("/my-tickets");
+  },
+});
+
+const reopenTicket = createResource({
+  url: "helpdesk.helpdesk.doctype.hd_ticket.api.reopen",
+  makeParams: () => ({ name: props.ticketId }),
+  onSuccess: () => {
+    ticket.reload();
+    toast.success(__("Ticket wieder geöffnet."));
+  },
+  onError: (err: FrappeResourceError) => {
+    toast.error(err.messages?.[0] || __("Ticket konnte nicht wieder geöffnet werden."));
+    ticket.reload();
   },
 });
 

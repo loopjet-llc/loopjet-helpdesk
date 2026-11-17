@@ -8,7 +8,11 @@ from functools import cached_property
 
 import frappe
 
-from helpdesk.consts import CORE_TICKET_FIELDS, DEFAULT_TICKET_TEMPLATE
+from helpdesk.consts import (
+    CORE_TICKET_FIELDS,
+    CUSTOMER_HIDDEN_SLA_FIELDS,
+    DEFAULT_TICKET_TEMPLATE,
+)
 from helpdesk.utils import is_agent
 
 AGENT_WORKFLOW_FIELDS = {"_assign", "_liked_by", "_user_tags"}
@@ -84,7 +88,12 @@ class TicketFields:
         agent_only_fields = {
             row.fieldname for row in self.template_rows if row.visible_to == "Agents"
         }
-        return self.unreadable_fields | agent_only_fields | AGENT_WORKFLOW_FIELDS
+        return (
+            self.unreadable_fields
+            | agent_only_fields
+            | AGENT_WORKFLOW_FIELDS
+            | CUSTOMER_HIDDEN_SLA_FIELDS
+        )
 
     @cached_property
     def is_agent(self) -> bool:

@@ -17,7 +17,8 @@
         :ticket-id="ticket.data.name"
         :model-value="ticket.data.priority"
         :disabled="
-          ticket.data.status === 'Closed' || !!ticket.data.feedback_rating
+          !(auth.isAdmin || auth.isManager) &&
+          (ticket.data.status === 'Closed' || !!ticket.data.feedback_rating)
         "
         class="min-w-0 flex-1"
         @updated="ticket.reload()"
@@ -32,26 +33,19 @@
         :ticket-id="ticket.data.name"
         :model-value="ticket.data.customer_assignee"
         :disabled="
-          ticket.data.status === 'Closed' || !!ticket.data.feedback_rating
+          !(auth.isAdmin || auth.isManager) &&
+          (ticket.data.status === 'Closed' || !!ticket.data.feedback_rating)
         "
         class="min-w-0 flex-1"
         @updated="ticket.reload()"
       />
     </div>
 
-    <div
-      v-for="data in slaData"
-      :key="data.title"
-      class="flex items-center gap-4"
-    >
-      <Tooltip :text="dayjs(data.value).format('LLLL')">
-        <span class="w-[150px] shrink-0 text-p-sm text-ink-gray-5">{{
-          data.title
-        }}</span>
-      </Tooltip>
-      <span class="flex-1 truncate text-p-sm" :class="data.textColor">
-        {{ __(data.label) }}
-      </span>
+    <div v-if="auth.isAdmin || auth.isManager" class="flex items-center gap-4">
+      <span class="w-[150px] shrink-0 text-p-sm text-ink-gray-5">{{
+        __("Bearbeiter")
+      }}</span>
+      <AssignTo class="min-w-0 flex-1" hide-label />
     </div>
 
     <div
@@ -72,41 +66,17 @@
 </template>
 
 <script setup lang="ts">
-import { dayjs } from "frappe-ui";
 import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
 import TicketCustomerAssigneeSelect from "@/components/ticket/TicketCustomerAssigneeSelect.vue";
-import {
-  slaLabel,
-  slaTextColor,
-  useSLA,
-  type SLAMetric,
-} from "@/composables/useSLA";
+import AssignTo from "@/components/ticket-agent/AssignTo.vue";
+import { useAuthStore } from "@/stores/auth";
 import { __ } from "@/translation";
 import { Field } from "@/types";
 import { computed, inject } from "vue";
 import { ITicket } from "./symbols";
 
 const ticket = inject(ITicket);
-
-const { firstResponse, resolution } = useSLA(
-  computed(() => ({ doc: ticket.data }))
-);
-
-const slaData = computed(() =>
-  [
-    { title: "Expected First Response", metric: firstResponse.value },
-    { title: "Expected Resolution", metric: resolution.value },
-  ]
-    .filter((row): row is { title: string; metric: SLAMetric } =>
-      Boolean(row.metric)
-    )
-    .map((row) => ({
-      title: row.title,
-      value: row.metric.dueBy,
-      label: slaLabel(row.metric),
-      textColor: slaTextColor(row.metric),
-    }))
-);
+const auth = useAuthStore();
 
 const customFields = computed(() =>
   ticket.data.template.fields.filter(

@@ -2,6 +2,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 
 from helpdesk.api.doc import get_filterable_fields, get_quick_filters, sort_options
+from helpdesk.consts import CUSTOMER_HIDDEN_SLA_FIELDS
 from helpdesk.test_utils import create_agent, create_contact, create_user, unique_email
 
 AGENT_ONLY_FIELDS = {"_assign", "_user_tags", "agent_group", "ticket_type", "contact"}
@@ -37,6 +38,7 @@ class TestFilterableFields(FieldPersonas):
         self.assertIn("subject", fields)
         self.assertIn("status", fields)
         self.assertFalse(AGENT_ONLY_FIELDS & set(fields))
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(fields))
 
     def test_team_restriction_hides_team_unless_ignored(self) -> None:
         with change_settings("HD Settings", {"restrict_tickets_by_agent_group": 1}):
@@ -76,6 +78,7 @@ class TestSortOptions(FieldPersonas):
         self.assertIn("subject", values)
         self.assertIn("modified", values)
         self.assertFalse(AGENT_ONLY_FIELDS & set(values))
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(values))
 
     def values(self, options: list[dict]) -> list[str]:
         return [option["value"] for option in options]
@@ -96,6 +99,7 @@ class TestQuickFilters(FieldPersonas):
 
         self.assertIn("subject", names)
         self.assertNotIn("customer", names)
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(names))
 
     def test_select_filter_starts_with_an_empty_option(self) -> None:
         with self.set_user(self.agent):

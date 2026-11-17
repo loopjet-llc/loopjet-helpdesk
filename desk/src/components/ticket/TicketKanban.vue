@@ -77,7 +77,7 @@
               </p>
 
               <div
-                v-if="ticket.resolution_by || ticket.agreement_status"
+                v-if="!isCustomerPortal && (ticket.resolution_by || ticket.agreement_status)"
                 class="mt-3 flex items-center gap-1.5 rounded-6 px-2 py-1.5 text-p-xs"
                 :class="slaClass(ticket.agreement_status)"
               >

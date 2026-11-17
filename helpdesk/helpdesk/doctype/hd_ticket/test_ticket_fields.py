@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.client import get as client_get
 from frappe.permissions import update_permission_property
@@ -6,13 +8,14 @@ from frappe.tests.utils import FrappeTestCase
 from helpdesk.api.doc import get_visible_custom_fields
 from helpdesk.consts import (
     CORE_TICKET_FIELDS,
+    CUSTOMER_HIDDEN_SLA_FIELDS,
     DEFAULT_TICKET_TEMPLATE,
     TICKET_INTERNAL_FIELD_PERMLEVEL,
 )
 from helpdesk.helpdesk.doctype.hd_ticket.api import (
     get_one,
-    get_ticket_customizations,
     merge_ticket,
+    reopen,
 )
 from helpdesk.helpdesk.doctype.hd_ticket_template.api import get_one as get_ticket_form
 from helpdesk.test_utils import (
@@ -22,6 +25,7 @@ from helpdesk.test_utils import (
     make_customer_ticket,
     reply_from_the_portal,
     set_default_template_visibility,
+    unique_email,
 )
 from helpdesk.ticket_fields import TicketFields
 
@@ -50,6 +54,15 @@ class TestTicketFieldVisibility(FrappeTestCase):
         self.assertTrue(client_get("HD Ticket", ticket.name).get("response_by"))
         frappe.set_user(AGENT_EMAIL)
         self.assertTrue(get_one(ticket.name).get("response_by"))
+
+    def test_customer_ticket_payload_hides_sla_fields(self):
+        ticket = make_customer_ticket(self, CUSTOMER_EMAIL)
+
+        frappe.set_user(CUSTOMER_EMAIL)
+        self.assertFalse(CUSTOMER_HIDDEN_SLA_FIELDS & set(get_one(ticket.name)))
+
+        frappe.set_user(AGENT_EMAIL)
+        self.assertIn("response_by", get_one(ticket.name))
 
     def test_hiding_the_contact_fields_still_returns_a_ticket(self):
         """get_one used to build the contact card out of raised_by, which hiding removes."""
@@ -97,6 +110,39 @@ class TestTicketFieldVisibility(FrappeTestCase):
     def test_a_portal_reply_cannot_reopen_a_closed_ticket(self):
         with self.assertRaises(frappe.PermissionError):
             reply_from_the_portal(self, CUSTOMER_EMAIL, "Closed")
+
+    def test_customer_reopens_resolved_and_closed_tickets_without_losing_feedback(self):
+        outsider = create_contact("Other Customer", unique_email("reopen-outsider"))
+        for status in ("Resolved", "Closed"):
+            with self.subTest(status=status):
+                frappe.set_user("Administrator")
+                ticket = make_customer_ticket(self, CUSTOMER_EMAIL)
+                frappe.set_user(AGENT_EMAIL)
+                ticket.status = status
+                ticket.save()
+                if status == "Closed":
+                    option = frappe.get_all(
+                        "HD Ticket Feedback Option", pluck="name", limit=1
+                    )[0]
+                    frappe.db.set_value("HD Ticket", ticket.name, "feedback", option)
+
+                frappe.set_user(outsider["user"])
+                with self.assertRaises(frappe.PermissionError):
+                    reopen(ticket.name)
+
+                frappe.set_user(CUSTOMER_EMAIL)
+                self.assertTrue(get_one(ticket.name)["can_reopen"])
+                self.assertEqual(reopen(ticket.name)["status"], "Open")
+                ticket.reload()
+                self.assertEqual(ticket.status, "Open")
+                self.assertIsNone(ticket.resolution_date)
+                self.assertFalse(get_one(ticket.name)["can_reopen"])
+                if status == "Closed":
+                    self.assertEqual(ticket.feedback, option)
+                    with patch("frappe.sendmail"):
+                        ticket.create_communication_via_contact("<p>Follow-up</p>")
+                with self.assertRaises(frappe.ValidationError):
+                    reopen(ticket.name)
 
     def test_visible_custom_fields_are_the_everyone_rows(self):
         self.addCleanup(set_default_template_visibility("priority", "Agents"))

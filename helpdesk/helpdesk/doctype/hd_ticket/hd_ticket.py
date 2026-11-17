@@ -26,11 +26,13 @@ from pypika.functions import Count
 from pypika.queries import Query
 from pypika.terms import Criterion
 
-from helpdesk.consts import SERVER_COMPUTED_FIELDS
+from helpdesk.consts import CUSTOMER_HIDDEN_SLA_FIELDS, SERVER_COMPUTED_FIELDS
 from helpdesk.customer_team import (
     email_team_member,
     is_team_member,
     mentioned_users,
+    project_accounts_for_user,
+    team_member_for_raiser,
     team_members,
     visible_team_accounts,
 )
@@ -110,6 +112,10 @@ class HDTicket(Document, CustomerEditController):
         self.validate_portal_contact()
         self.set_contact()
         self.set_customer()
+        if self.is_new() and not self.customer_assignee:
+            self.customer_assignee = team_member_for_raiser(
+                self.customer, self.raised_by
+            )
 
     def validate(self):
         self.validate_feedback()
@@ -354,13 +360,20 @@ class HDTicket(Document, CustomerEditController):
 
         if self.customer:
             if self.customer not in contact_customers and not is_agent():
-                frappe.throw(
-                    _(
-                        "The selected customer {0} is not linked to the contact {1}."
-                        "Please select a valid customer or update the contact's linked customers."
-                    ).format(self.customer, self.contact),
-                    frappe.ValidationError,
+                shared_project = (
+                    self.is_new()
+                    and self.via_customer_portal
+                    and self.contact == self.get_session_contact()
+                    and self.customer in project_accounts_for_user(frappe.session.user)
                 )
+                if not shared_project:
+                    frappe.throw(
+                        _(
+                            "The selected customer {0} is not linked to the contact {1}."
+                            "Please select a valid customer or update the contact's linked customers."
+                        ).format(self.customer, self.contact),
+                        frappe.ValidationError,
+                    )
             return
 
         if not frappe.db.get_single_value(
@@ -1315,18 +1328,6 @@ class HDTicket(Document, CustomerEditController):
                 "width": "13rem",
             },
             {
-                "label": "First response",
-                "type": "Datetime",
-                "key": "response_by",
-                "width": "8rem",
-            },
-            {
-                "label": "Resolution",
-                "type": "Datetime",
-                "key": "resolution_by",
-                "width": "8rem",
-            },
-            {
                 "label": "Team",
                 "type": "Link",
                 "options": "HD Team",
@@ -1360,6 +1361,8 @@ class HDTicket(Document, CustomerEditController):
             "_assign",
             "resolution_date",
         ]
+        if show_customer_portal_fields:
+            rows = [row for row in rows if row not in CUSTOMER_HIDDEN_SLA_FIELDS]
         return {
             "columns": (
                 customer_portal_columns if show_customer_portal_fields else columns
@@ -1395,10 +1398,8 @@ class HDTicket(Document, CustomerEditController):
 
     @staticmethod
     def filter_standard_fields(fields):
-        for f in fields:
-            if f["name"] in customer_not_allowed_fields:
-                fields.remove(f)
-        return fields
+        hidden = set(customer_not_allowed_fields) | CUSTOMER_HIDDEN_SLA_FIELDS
+        return [field for field in fields if field["name"] not in hidden]
 
 
 def get_site_file_url(src: str | None) -> str | None:

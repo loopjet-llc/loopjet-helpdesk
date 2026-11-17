@@ -37,7 +37,7 @@ class CustomerEditController:
         if self.flags.get("ignore_closed_ticket_guard"):
             return
         is_closed = old_doc.status == "Closed"
-        is_rated = bool(old_doc.feedback)
+        is_rated = bool(old_doc.feedback) and old_doc.status_category == "Resolved"
         if is_closed or is_rated:
             text = _("Closed or rated tickets cannot be updated by non-agents")
             frappe.throw(text, frappe.PermissionError)
