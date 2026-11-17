@@ -57,7 +57,12 @@
               >
                 {{ ticket.subject }}
               </h3>
-              <p class="mt-1 truncate text-p-xs text-ink-gray-6">
+              <div v-if="isCustomerPortal && ticket.customer" class="mt-2">
+                <TicketProjectTag
+                  :label="projectLabels?.[ticket.customer] || ticket.customer"
+                />
+              </div>
+              <p v-else class="mt-1 truncate text-p-xs text-ink-gray-6">
                 {{ ticket.customer || ticket.contact || __("Kein Kunde") }}
               </p>
               <p
@@ -107,6 +112,7 @@
 
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
+import TicketProjectTag from "./TicketProjectTag.vue";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
 import { shortDuration } from "@/utils";
@@ -117,6 +123,7 @@ import draggable from "vuedraggable";
 interface Props {
   rows: Record<string, any>[];
   isCustomerPortal?: boolean;
+  projectLabels?: Record<string, string>;
 }
 
 const props = withDefaults(defineProps<Props>(), {

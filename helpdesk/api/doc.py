@@ -7,6 +7,7 @@ from frappe.query_builder.functions import Date
 from pypika import Criterion
 
 from helpdesk.api.dashboard import COUNT_NAME
+from helpdesk.customer_team import project_accounts_for_user
 from helpdesk.utils import (
     agent_only,
     call_log_default_columns,
@@ -33,6 +34,7 @@ def get_list_data(
     show_customer_portal_fields: bool = False,
     view: dict | None = None,
     is_default: bool = False,
+    project_customer: str | None = None,
 ) -> dict:
     is_custom = False
 
@@ -100,6 +102,38 @@ def get_list_data(
                     else:
                         filters.append([key, "=", value])
 
+    if (
+        doctype == "HD Ticket"
+        and show_customer_portal_fields
+        and project_customer is not None
+    ):
+        # The quick selector overrides a view's customer condition only for this request.
+        if isinstance(filters, dict):
+            filters = [
+                [key, "=", value] if not isinstance(value, list) else [key, *value]
+                for key, value in filters.items()
+                if key != "customer"
+            ]
+        else:
+            filters = [
+                condition
+                for condition in filters
+                if not (
+                    isinstance(condition, list)
+                    and (
+                        condition[0] == "customer"
+                        or condition[:2] == ["HD Ticket", "customer"]
+                    )
+                )
+            ]
+        if project_customer:
+            if project_customer not in project_accounts_for_user(frappe.session.user):
+                frappe.throw(
+                    _("This project is not available to your team."),
+                    frappe.PermissionError,
+                )
+            filters.append(["customer", "=", project_customer])
+
     handle_at_me_support(filters)
     handle_assigned_on_filter(filters, doctype)
 
@@ -116,6 +150,8 @@ def get_list_data(
 
     rows.append("name") if "name" not in rows else rows
     if doctype == "HD Ticket":
+        if show_customer_portal_fields and "customer" not in rows:
+            rows.append("customer")
         rows.append("_seen") if "_seen" not in rows else rows
         # the SLA columns can't tell fulfilled from due without these, and no saved view lists them
         for field in SLA_ROW_FIELDS:

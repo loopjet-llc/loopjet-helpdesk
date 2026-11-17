@@ -22,6 +22,12 @@
         </Button>
       </template>
     </LayoutHeader>
+    <div
+      v-if="ticket.data.customer"
+      class="border-b border-outline-gray-1 px-5 py-2.5"
+    >
+      <TicketProjectTag :label="projectLabel(ticket.data.customer)" />
+    </div>
     <div class="flex overflow-hidden h-full w-full">
       <!-- Main Ticket Comm -->
       <section class="flex flex-col flex-1 w-full md:max-w-[calc(100%-382px)]">
@@ -109,6 +115,8 @@
 
 <script setup lang="ts">
 import { LayoutHeader } from "@/components";
+import TicketProjectTag from "@/components/ticket/TicketProjectTag.vue";
+import { useCustomerProjects } from "@/composables/useCustomerProjects";
 import TicketCustomerSidebar from "@/components/ticket/TicketCustomerSidebar.vue";
 import {
   createToast,
@@ -157,6 +165,7 @@ interface P {
 }
 const router = useRouter();
 const props = defineProps<P>();
+const { projectLabel } = useCustomerProjects();
 
 const { getStatus } = useTicketStatusStore();
 

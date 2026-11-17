@@ -46,6 +46,31 @@
         </div>
       </template>
     </LayoutHeader>
+    <div
+      v-if="isCustomerPortal"
+      class="flex items-center gap-3 border-b border-outline-gray-1 px-5 py-2.5"
+    >
+      <label
+        for="ticket-project-filter"
+        class="shrink-0 text-p-sm font-medium text-ink-gray-7"
+      >
+        {{ __("Projekt") }}
+      </label>
+      <select
+        id="ticket-project-filter"
+        v-model="projectCustomer"
+        class="min-w-0 max-w-64 rounded-4 border border-outline-gray-2 bg-surface-base px-2.5 py-1.5 text-p-sm text-ink-gray-8 focus:border-outline-gray-4 focus:outline-none"
+      >
+        <option value="">{{ __("Alle Projekte") }}</option>
+        <option
+          v-for="project in projects"
+          :key="project.customer"
+          :value="project.customer"
+        >
+          {{ project.label }}
+        </option>
+      </select>
+    </div>
     <ListViewBuilder
       ref="listViewRef"
       :options="options"
@@ -73,6 +98,7 @@
       :key="selectedTicket"
       :ticket-id="selectedTicket"
       :is-customer-portal="isCustomerPortal"
+      :project-labels="projectLabels"
       @close="selectedTicket = null"
       @updated="listViewRef?.reload()"
     />
@@ -98,11 +124,13 @@ import BulkAssignModal from "@/components/ticket-agent/BulkAssignModal.vue";
 import BulkEditModal from "@/components/ticket-agent/BulkEditModal.vue";
 import BulkReplyModal from "@/components/ticket-agent/BulkReplyModal.vue";
 import TicketBoardDrawer from "@/components/ticket/TicketBoardDrawer.vue";
+import TicketProjectTag from "@/components/ticket/TicketProjectTag.vue";
 import ExportModal from "@/components/ticket/ExportModal.vue";
 import ViewBreadcrumbs from "@/components/ViewBreadcrumbs.vue";
 import { normalizeFilters } from "@/components/view-controls/filter";
 import ViewModal from "@/components/ViewModal.vue";
 import { currentView, useView } from "@/composables/useView";
+import { useCustomerProjects } from "@/composables/useCustomerProjects";
 import { useAuthStore } from "@/stores/auth";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
@@ -138,6 +166,8 @@ const { isManager, userId } = useAuthStore();
 
 const listViewRef = ref(null);
 const selectedTicket = ref<string | null>(null);
+const projectCustomer = ref("");
+const { projects, labels: projectLabels, projectLabel } = useCustomerProjects();
 const viewMode = useStorage<"list" | "kanban">(
   `helpdesk-ticket-view-${isCustomerPortal.value ? "customer" : "agent"}`,
   "kanban"
@@ -202,13 +232,16 @@ const options = computed(() => ({
       custom: ({ row, item }) => {
         const seenBy = row._seen ? JSON.parse(row._seen) : [];
         const isSeen = seenBy.includes(userId || "");
-        return h(
-          "span",
-          {
-            class: ["truncate flex-1", !isSeen && "font-semibold"],
-          },
-          item
-        );
+        return h("div", { class: "flex min-w-0 items-center gap-2" }, [
+          h(
+            "span",
+            { class: ["min-w-0 truncate", !isSeen && "font-semibold"] },
+            item
+          ),
+          isCustomerPortal.value && row.customer
+            ? h(TicketProjectTag, { label: projectLabel(row.customer) })
+            : null,
+        ]);
       },
     },
     status: {
@@ -248,6 +281,8 @@ const options = computed(() => ({
     },
   },
   isCustomerPortal: isCustomerPortal.value,
+  projectFilter: isCustomerPortal.value ? projectCustomer.value : null,
+  projectLabels: projectLabels.value,
   selectable: viewMode.value === "list",
   showSelectBanner: viewMode.value === "list",
   selectBannerActions,

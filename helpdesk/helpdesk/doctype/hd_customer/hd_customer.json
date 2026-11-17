@@ -12,6 +12,7 @@
   "customer_type",
   "domain",
   "collaboration_team",
+  "project_label",
   "erpnext_customer",
   "country",
   "column_break_fead",
@@ -55,6 +56,13 @@
    "fieldtype": "Link",
    "label": "Company Team",
    "options": "HD Customer",
+   "permlevel": 8
+  },
+  {
+   "description": "Short project name displayed on customer tickets and in project filters.",
+   "fieldname": "project_label",
+   "fieldtype": "Data",
+   "label": "Project Label",
    "permlevel": 8
   },
   {

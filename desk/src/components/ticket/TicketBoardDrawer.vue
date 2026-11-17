@@ -33,10 +33,18 @@
         <div class="min-w-0">
           <p class="text-p-xs font-medium text-ink-gray-5">
             #{{ ticketId }}
-            <span v-if="displayTicket?.customer">
+            <span v-if="displayTicket?.customer && !isCustomerPortal">
               · {{ displayTicket.customer }}</span
             >
           </p>
+          <div v-if="isCustomerPortal && displayTicket?.customer" class="mt-1">
+            <TicketProjectTag
+              :label="
+                projectLabels?.[displayTicket.customer] ||
+                displayTicket.customer
+              "
+            />
+          </div>
           <h2 class="mt-1 truncate text-lg font-semibold text-ink-gray-9">
             {{ displayTicket?.subject || __("Ticket wird geladen …") }}
           </h2>
@@ -232,6 +240,7 @@ import TicketConversation from "@/pages/ticket/TicketConversation.vue";
 import TicketTextEditor from "@/pages/ticket/TicketTextEditor.vue";
 import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
 import TicketCustomerAssigneeSelect from "@/components/ticket/TicketCustomerAssigneeSelect.vue";
+import TicketProjectTag from "@/components/ticket/TicketProjectTag.vue";
 import { ITicket } from "@/pages/ticket/symbols";
 import LucideMaximize2 from "~icons/lucide/maximize-2";
 import LucideMinimize2 from "~icons/lucide/minimize-2";
@@ -240,6 +249,7 @@ import LucideX from "~icons/lucide/x";
 interface Props {
   ticketId: string;
   isCustomerPortal?: boolean;
+  projectLabels?: Record<string, string>;
 }
 
 const props = withDefaults(defineProps<Props>(), { isCustomerPortal: false });
