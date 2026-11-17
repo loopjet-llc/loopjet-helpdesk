@@ -40,6 +40,18 @@
                 <AssignTo hide-label ghost />
               </div>
             </div>
+            <div
+              v-if="(auth.isAdmin || auth.isManager) && ticket.doc?.customer"
+              class="flex items-center gap-2 leading-5"
+            >
+              <FieldLabel label="Customer assignee" />
+              <TicketCustomerAssigneeSelect
+                :ticket-id="ticket.doc.name"
+                :model-value="ticket.doc.customer_assignee"
+                class="min-w-0 flex-1"
+                @updated="ticket.reload()"
+              />
+            </div>
             <!-- Core fields -->
             <template v-for="field in coreFields">
               <TicketField
@@ -154,6 +166,7 @@ import { parseField } from "@/composables/formCustomisation";
 import { useNotifyTicketUpdate } from "@/composables/realtime";
 import { useShortcut } from "@/composables/shortcuts";
 import { getMeta } from "@/stores/meta";
+import { useAuthStore } from "@/stores/auth";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation.ts";
 import {
@@ -171,11 +184,13 @@ import Section from "../Section.vue";
 import Tags from "../tag/Tags.vue";
 import TicketField from "../TicketField.vue";
 import AssignTo from "./AssignTo.vue";
+import TicketCustomerAssigneeSelect from "@/components/ticket/TicketCustomerAssigneeSelect.vue";
 import TicketContact from "./TicketContact.vue";
 import TicketFeedback from "./TicketFeedback.vue";
 import TicketSLA from "./TicketSLA.vue";
 
 const ticket = inject(TicketSymbol)!;
+const auth = useAuthStore();
 const assignees = inject(AssigneeSymbol)!;
 const customizations = inject(CustomizationSymbol)!;
 const recentSimilarTickets = inject(RecentSimilarTicketsSymbol)!;

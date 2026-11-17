@@ -9,6 +9,11 @@ from helpdesk.customer_team import (
     project_options,
     team_members,
 )
+from helpdesk.utils import is_agent_manager
+
+
+def can_assign_for_customer(customer: str | None) -> bool:
+    return is_team_member(customer) or is_agent_manager()
 
 
 @frappe.whitelist()
@@ -23,7 +28,7 @@ def get_projects() -> list[dict]:
 def get_members(ticket: str) -> list[dict]:
     frappe.has_permission("HD Ticket", "read", ticket, throw=True)
     customer = frappe.db.get_value("HD Ticket", ticket, "customer")
-    if not is_team_member(customer):
+    if not can_assign_for_customer(customer):
         frappe.throw(
             _("You are not a member of this company team."), frappe.PermissionError
         )
@@ -34,7 +39,7 @@ def get_members(ticket: str) -> list[dict]:
 def assign(ticket: str, assignee: str | None = None) -> dict:
     frappe.has_permission("HD Ticket", "read", ticket, throw=True)
     doc = frappe.get_doc("HD Ticket", ticket)
-    if not is_team_member(doc.customer):
+    if not can_assign_for_customer(doc.customer):
         frappe.throw(
             _("You are not a member of this company team."), frappe.PermissionError
         )

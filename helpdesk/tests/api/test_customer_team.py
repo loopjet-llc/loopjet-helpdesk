@@ -9,13 +9,19 @@ from frappe.tests.utils import FrappeTestCase
 from helpdesk.api.customer_team import assign, get_members, get_projects
 from helpdesk.api.doc import get_list_data
 from helpdesk.customer_team import mentioned_users
+from helpdesk.patches.backfill_customer_assignee_from_raiser import (
+    execute as backfill_owners,
+)
 from helpdesk.test_utils import (
     create_contact,
     create_customer,
     default_template_rows,
     make_ticket,
+    make_agent_manager,
     other_priority,
     set_default_template_rows,
+    unique_email,
+    unique_name,
 )
 
 
@@ -44,6 +50,7 @@ class TestCustomerTeam(FrappeTestCase):
             raised_by=b["user"],
             via_customer_portal=1,
         )
+        self.assertEqual(ticket.customer_assignee, b["user"])
         unrelated = make_ticket(
             customer=other.name,
             contact=outsider["contact"],
@@ -97,6 +104,7 @@ class TestCustomerTeam(FrappeTestCase):
         )
 
         with patch("helpdesk.api.customer_team.email_team_member") as mail:
+            assign(ticket.name, a["user"])
             assign(ticket.name, b["user"])
             assign(ticket.name, b["user"])
         self.assertEqual(mail.call_count, 1)
@@ -106,6 +114,22 @@ class TestCustomerTeam(FrappeTestCase):
         )
         with self.assertRaises(frappe.PermissionError):
             assign(ticket.name, outsider["user"])
+
+        frappe.set_user("Administrator")
+        manager = make_agent_manager("customer-owner-manager")
+        with self.set_user(manager):
+            self.assertEqual(
+                {member["user"] for member in get_members(ticket.name)},
+                {a["user"], b["user"]},
+            )
+            with patch("helpdesk.api.customer_team.email_team_member") as mail:
+                assign(ticket.name, a["user"])
+            mail.assert_called_once()
+        self.assertEqual(
+            frappe.db.get_value("HD Ticket", ticket.name, "customer_assignee"),
+            a["user"],
+        )
+        frappe.set_user(a["user"])
 
         mention = f'<p><span class="mention" data-type="mention" data-id="{b["user"]}">@Team B</span></p>'
         self.assertEqual(mentioned_users(project.name, mention), [b["user"]])
@@ -151,8 +175,55 @@ class TestCustomerTeam(FrappeTestCase):
         with self.assertRaises(frappe.PermissionError):
             assign(ticket.name, None)
 
+        with self.set_user(manager):
+            with patch("helpdesk.api.customer_team.email_team_member"):
+                assign(ticket.name, b["user"])
+        self.assertEqual(
+            frappe.db.get_value("HD Ticket", ticket.name, "customer_assignee"),
+            b["user"],
+        )
+
         frappe.set_user(outsider["user"])
         self.assertEqual({row["customer"] for row in get_projects()}, {other.name})
         with self.assertRaises(frappe.PermissionError):
             get_members(ticket.name)
         self.assertFalse(frappe.has_permission("HD Ticket", "read", ticket.name))
+
+    def test_backfill_uses_original_team_member_without_overwriting_manual_owner(self):
+        frappe.set_user("Administrator")
+        self.addCleanup(frappe.set_user, "Administrator")
+        creator = create_contact("Creator", unique_email("creator"))
+        colleague = create_contact("Colleague", unique_email("colleague"))
+        customer = create_customer(
+            unique_name("Customer"),
+            [
+                {"contact_name": creator["contact"]},
+                {"contact_name": colleague["contact"]},
+            ],
+        )
+        missing = make_ticket(customer=customer.name, raised_by=creator["user"])
+        chosen = make_ticket(
+            customer=customer.name,
+            raised_by=creator["user"],
+            customer_assignee=colleague["user"],
+        )
+        self.assertEqual(missing.customer_assignee, creator["user"])
+        self.assertEqual(chosen.customer_assignee, colleague["user"])
+        frappe.db.set_value(
+            "HD Ticket",
+            missing.name,
+            "customer_assignee",
+            None,
+            update_modified=False,
+        )
+
+        backfill_owners()
+
+        self.assertEqual(
+            frappe.db.get_value("HD Ticket", missing.name, "customer_assignee"),
+            creator["user"],
+        )
+        self.assertEqual(
+            frappe.db.get_value("HD Ticket", chosen.name, "customer_assignee"),
+            colleague["user"],
+        )

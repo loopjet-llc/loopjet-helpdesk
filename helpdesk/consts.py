@@ -35,6 +35,7 @@ PORTAL_INSERT_EXEMPT_FIELDS = [
     "raised_by",
     "via_customer_portal",
     "customer",
+    "customer_assignee",
 ]
 
 # a customer may always change these: closing sets status_category, rating the feedback

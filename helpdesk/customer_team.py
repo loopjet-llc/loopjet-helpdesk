@@ -2,6 +2,7 @@
 
 import frappe
 from bs4 import BeautifulSoup
+from email.utils import parseaddr
 from frappe import _
 from frappe.utils import get_fullname
 from html import escape
@@ -104,6 +105,21 @@ def team_members(customer: str | None) -> list[dict]:
             for row in users
         ),
         key=lambda row: row["label"].casefold(),
+    )
+
+
+def team_member_for_raiser(customer: str | None, raised_by: str | None) -> str | None:
+    """Resolve a ticket sender to an enabled user in the ticket's company team."""
+    email = parseaddr(raised_by or "")[1].casefold()
+    if not email:
+        return None
+    return next(
+        (
+            member["user"]
+            for member in team_members(customer)
+            if member["user"].casefold() == email
+        ),
+        None,
     )
 
 

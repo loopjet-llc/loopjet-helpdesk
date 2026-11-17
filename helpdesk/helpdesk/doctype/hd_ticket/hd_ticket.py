@@ -31,6 +31,7 @@ from helpdesk.customer_team import (
     email_team_member,
     is_team_member,
     mentioned_users,
+    team_member_for_raiser,
     team_members,
     visible_team_accounts,
 )
@@ -110,6 +111,10 @@ class HDTicket(Document, CustomerEditController):
         self.validate_portal_contact()
         self.set_contact()
         self.set_customer()
+        if self.is_new() and not self.customer_assignee:
+            self.customer_assignee = team_member_for_raiser(
+                self.customer, self.raised_by
+            )
 
     def validate(self):
         self.validate_feedback()

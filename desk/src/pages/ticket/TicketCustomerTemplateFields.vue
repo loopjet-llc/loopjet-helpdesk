@@ -17,7 +17,8 @@
         :ticket-id="ticket.data.name"
         :model-value="ticket.data.priority"
         :disabled="
-          ticket.data.status === 'Closed' || !!ticket.data.feedback_rating
+          !(auth.isAdmin || auth.isManager) &&
+          (ticket.data.status === 'Closed' || !!ticket.data.feedback_rating)
         "
         class="min-w-0 flex-1"
         @updated="ticket.reload()"
@@ -32,11 +33,19 @@
         :ticket-id="ticket.data.name"
         :model-value="ticket.data.customer_assignee"
         :disabled="
-          ticket.data.status === 'Closed' || !!ticket.data.feedback_rating
+          !(auth.isAdmin || auth.isManager) &&
+          (ticket.data.status === 'Closed' || !!ticket.data.feedback_rating)
         "
         class="min-w-0 flex-1"
         @updated="ticket.reload()"
       />
+    </div>
+
+    <div v-if="auth.isAdmin || auth.isManager" class="flex items-center gap-4">
+      <span class="w-[150px] shrink-0 text-p-sm text-ink-gray-5">{{
+        __("Bearbeiter")
+      }}</span>
+      <AssignTo class="min-w-0 flex-1" hide-label />
     </div>
 
     <div
@@ -75,6 +84,8 @@
 import { dayjs } from "frappe-ui";
 import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
 import TicketCustomerAssigneeSelect from "@/components/ticket/TicketCustomerAssigneeSelect.vue";
+import AssignTo from "@/components/ticket-agent/AssignTo.vue";
+import { useAuthStore } from "@/stores/auth";
 import {
   slaLabel,
   slaTextColor,
@@ -87,6 +98,7 @@ import { computed, inject } from "vue";
 import { ITicket } from "./symbols";
 
 const ticket = inject(ITicket);
+const auth = useAuthStore();
 
 const { firstResponse, resolution } = useSLA(
   computed(() => ({ doc: ticket.data }))

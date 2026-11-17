@@ -142,8 +142,9 @@
             :ticket-id="ticketId"
             :model-value="displayTicket.priority"
             :disabled="
-              displayTicket.status === 'Closed' ||
-              !!displayTicket.feedback_rating
+              !canManageAgentAssignment &&
+              (displayTicket.status === 'Closed' ||
+                !!displayTicket.feedback_rating)
             "
             class="mt-1 w-full text-sm"
             @updated="handleCustomerPriorityUpdated"
@@ -164,13 +165,24 @@
             :ticket-id="ticketId"
             :model-value="displayTicket.customer_assignee"
             :disabled="
-              displayTicket.status === 'Closed' ||
-              !!displayTicket.feedback_rating
+              !canManageAgentAssignment &&
+              (displayTicket.status === 'Closed' ||
+                !!displayTicket.feedback_rating)
             "
             class="mt-1 w-full text-sm"
             @updated="handleCustomerPriorityUpdated"
           />
         </div>
+      </div>
+
+      <div
+        v-if="isCustomerPortal && canManageAgentAssignment && displayTicket"
+        class="flex items-center gap-4 border-b px-4 py-3"
+      >
+        <span class="w-28 shrink-0 text-p-xs text-ink-gray-5">{{
+          __("Bearbeiter")
+        }}</span>
+        <AssignTo class="min-w-0 flex-1" hide-label @updated="handleAssigneesUpdated" />
       </div>
 
       <div v-if="!displayTicket" class="grid flex-1 place-items-center">
@@ -230,6 +242,7 @@ import {
   useTicketPriorityStore,
 } from "@/stores/ticketPriority";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
+import { useAuthStore } from "@/stores/auth";
 import { __ } from "@/translation";
 import { AssigneeSymbol, TicketSymbol } from "@/types";
 import { isContentEmpty, uploadFunction } from "@/utils";
@@ -254,12 +267,14 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), { isCustomerPortal: false });
 const emit = defineEmits<{ close: []; updated: [] }>();
+const auth = useAuthStore();
+const canManageAgentAssignment = computed(() => auth.isAdmin || auth.isManager);
 const { statuses, getStatus } = useTicketStatusStore();
 const enabledStatuses = computed(() =>
   (statuses.data || []).filter((status) => status.enabled)
 );
 
-const agentTicketComposable = props.isCustomerPortal
+const agentTicketComposable = props.isCustomerPortal && !canManageAgentAssignment.value
   ? null
   : useTicket(props.ticketId);
 const agentTicket = computed(() => agentTicketComposable?.ticket);

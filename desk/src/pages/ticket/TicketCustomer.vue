@@ -125,6 +125,9 @@ import {
 import { useActiveViewers } from "@/composables/realtime";
 import { useScreenSize } from "@/composables/screen";
 import { useConfigStore } from "@/stores/config";
+import { useAuthStore } from "@/stores/auth";
+import { useTicket } from "@/composables/useTicket";
+import { AssigneeSymbol, TicketSymbol } from "@/types";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
@@ -166,6 +169,10 @@ interface P {
 const router = useRouter();
 const props = defineProps<P>();
 const { projectLabel } = useCustomerProjects();
+const auth = useAuthStore();
+const agentAssignment = auth.isAdmin || auth.isManager ? useTicket(props.ticketId) : null;
+provide(TicketSymbol, computed(() => agentAssignment?.ticket) as any);
+provide(AssigneeSymbol, computed(() => agentAssignment?.assignees) as any);
 
 const { getStatus } = useTicketStatusStore();
 
