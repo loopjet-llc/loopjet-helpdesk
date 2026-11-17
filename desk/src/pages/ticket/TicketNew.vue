@@ -19,6 +19,10 @@
       <div v-if="Boolean(template.data?.about)" class="">
         <div class="prose-f" v-html="sanitize(template.data.about)" />
       </div>
+      <div v-if="isCustomerPortal" class="flex flex-col gap-2">
+        <label class="text-sm text-ink-gray-7">{{ __("Priority") }}</label>
+        <TicketPrioritySelect v-model="priority" class="w-full sm:w-64" />
+      </div>
       <!-- custom fields -->
       <div
         class="grid grid-cols-1 gap-4 sm:grid-cols-3"
@@ -153,6 +157,7 @@
 
 <script setup lang="ts">
 import { LayoutHeader, UniInput } from "@/components";
+import TicketPrioritySelect from "@/components/ticket/TicketPrioritySelect.vue";
 import {
   handleLinkFieldUpdate,
   handleSelectFieldUpdate,
@@ -211,6 +216,7 @@ const canSubmit = computed(
 
 const subject = ref(String(route.query.subject ?? ""));
 const description = ref("");
+const priority = ref("");
 const attachments = ref([]);
 const templateFields = reactive({});
 
@@ -262,7 +268,9 @@ function applyFilters(fieldname: string, filters: any = null) {
 const customOnChange = computed(() => template.data?._customOnChange);
 
 const visibleFields = computed(() => {
-  let _fields = template.data?.fields;
+  let _fields = template.data?.fields?.filter(
+    (f) => !isCustomerPortal.value || f.fieldname !== "priority"
+  );
   if (!_fields) return [];
   return _fields.map((field) => parseField(field, templateFields));
 });
@@ -286,6 +294,9 @@ const ticket = createResource({
       subject: subject.value,
       template: props.templateId,
       ...templateFields,
+      ...(isCustomerPortal.value && priority.value
+        ? { priority: priority.value }
+        : {}),
     },
     attachments: attachments.value,
   }),
